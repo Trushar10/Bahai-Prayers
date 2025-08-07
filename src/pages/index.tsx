@@ -29,9 +29,9 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
   return (
     <>
       <Head>
-        <meta name="theme-color" content="#0f1624" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="../../public/profile-circle.webp" />
+        <meta name="theme-color" content="#317EFB" />
       </Head>
 
       <main className="p-6 max-w-3xl mx-auto text-white">

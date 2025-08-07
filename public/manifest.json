@@ -1,12 +1,21 @@
 {
-  "name": "ઇશ્વરના શબ્દો",
-  "short_name": "પ્રાર્થના",
+  "name": "Prayer App",
+  "short_name": "Prayer",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f1624",
-  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "theme_color": "#317EFB",
+  "orientation": "portrait",
   "icons": [
-    { "src": "/vercel.svg", "sizes": "192x192", "type": "image/svg" },
-    { "src": "/vercel.svg", "sizes": "512x512", "type": "image/svg" }
+    {
+      "src": "/profile-circle.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    },
+    {
+      "src": "/profile-circle.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    }
   ]
 }
