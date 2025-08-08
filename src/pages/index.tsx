@@ -1,19 +1,20 @@
-// pages/index.tsx
-
-import { GetStaticProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
-import { Entry, EntrySkeletonType, EntryFieldTypes } from 'contentful'
+import { GetStaticProps } from 'next'
+import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { client } from '../lib/contentful'
-import { useEffect, useState, useRef } from 'react'
+import Compass from '@/components/Compass'
 
+// 1. Define Contentful Schema
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
   body: EntryFieldTypes.RichText
 }>
+
 type PrayerEntry = Entry<PrayerSkeleton>
 
+// 2. Static Props
 export const getStaticProps: GetStaticProps = async () => {
   const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
 
@@ -21,85 +22,45 @@ export const getStaticProps: GetStaticProps = async () => {
     props: {
       prayers: res.items as PrayerEntry[],
     },
+    revalidate: 60, // Optional: Rebuild every 60s
   }
 }
 
+// 3. Home Page Component
 export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
-  const compassRef = useRef<HTMLDivElement>(null)
-  const [angle, setAngle] = useState(0)
-
-  // Coordinates of Baháʼu'lláh’s shrine
-  const shrineLat = 32.943333
-  const shrineLng = 35.092222
-
-  useEffect(() => {
-    const updateCompass = async () => {
-      if (!navigator.geolocation || typeof window === 'undefined') return
-
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords
-        const angleToShrine = getBearing(latitude, longitude, shrineLat, shrineLng)
-        setAngle(angleToShrine)
-      })
-
-      if (window.DeviceOrientationEvent && 'ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', (e) => {
-          if (e.alpha != null) {
-            compassRef.current?.style.setProperty('--angle', `${angle - e.alpha}deg`)
-          }
-        })
-      }
-    }
-
-    updateCompass()
-  }, [angle])
-
-  function getBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const toRad = (deg: number) => deg * (Math.PI / 180)
-    const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2))
-    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-              Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lon2 - lon1))
-    const brng = Math.atan2(y, x)
-    return (brng * (180 / Math.PI) + 360) % 360
-  }
-
   return (
     <>
       <Head>
-        <title>Prayer App</title>
-        <meta name="theme-color" content="#317EFB" />
+        <title>Prayers</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/profile-circle.webp" />
+        <meta name="theme-color" content="#317EFB" />
       </Head>
 
-      <div className="min-h-screen bg-black text-white flex flex-col items-center pt-20">
-        <header className="flex items-center space-x-4 mb-8">
-          <h1 className="text-3xl font-bold">Prayers</h1>
-          <div
-            ref={compassRef}
-            className="w-6 h-6 border-t-2 border-r-2 border-white rotate-[var(--angle,0deg)] transition-transform duration-500"
-            style={{
-              transform: `rotate(${angle}deg)`,
-              transformOrigin: '50% 50%',
-            }}
-            title="Points to Baháʼu'lláh’s Shrine"
-          />
+      <main className="min-h-screen flex flex-col items-center px-4 pt-20 text-white">
+        {/* Header with title and compass */}
+        <header className="flex items-center justify-center gap-4 mb-10">
+          <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          <div className="w-8 h-8">
+            <Compass />
+          </div>
         </header>
 
-        <main className="w-full max-w-xl">
-          <ul className="space-y-4 text-center">
-            {prayers.map((p) => (
-              <li key={p.sys.id}>
-                <Link
-                  href={`/${p.fields.slug}`}
-                  className="text-white text-lg hover:underline"
-                >
-                  {typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </main>
-      </div>
+        {/* Post List */}
+        <ul className="space-y-4 w-full max-w-xl">
+          {prayers.map((p) => (
+            <li key={p.sys.id} className="text-center">
+              <Link
+                href={`/${p.fields.slug}`}
+                className="text-blue-400 hover:underline text-lg"
+              >
+                {typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </main>
     </>
   )
 }

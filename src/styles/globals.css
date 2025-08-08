@@ -35,3 +35,8 @@ a {
 a:hover {
 	text-decoration: underline;
 }
+
+#compass {
+	transform: rotate(var(--angle));
+	transition: transform 0.5s ease;
+}
