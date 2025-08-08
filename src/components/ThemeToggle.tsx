@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react'
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  // ⛑ Get initial theme from <html data-theme="..."> (set by _document.tsx script)
+  const initialTheme = typeof document !== 'undefined'
+    ? (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') ?? 'light'
+    : 'light'
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-
-    const initial = stored === 'dark' || stored === 'light'
-      ? stored
-      : prefersDark ? 'dark' : 'light'
-
-    setTheme(initial)
-    document.documentElement.setAttribute('data-theme', initial)
+    // Enable transitions only after initial render to avoid flicker
+    document.documentElement.classList.add('theme-transition')
   }, [])
 
   const toggleTheme = () => {
@@ -34,7 +32,7 @@ export default function ThemeToggle() {
           width: 24,
           height: 24,
           color: 'currentColor',
-          transition: 'transform 0.4s ease, color 0.4s ease',
+          transition: 'transform 0.4s ease',
           transform: `rotate(${theme === 'dark' ? '0deg' : '180deg'}) scale(1.1)`
         }}
       >
