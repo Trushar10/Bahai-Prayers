@@ -34,7 +34,7 @@ export default function ThemeToggle() {
           width: 24,
           height: 24,
           color: 'currentColor',
-          transition: 'transform 0.4s ease',
+          transition: 'transform 0.4s ease, color 0.4s ease',
           transform: `rotate(${theme === 'dark' ? '0deg' : '180deg'}) scale(1.1)`
         }}
       >
