@@ -1,106 +1,68 @@
-// components/Compass.tsx
-'use client'
+import Head from 'next/head'
+import Link from 'next/link'
+import { GetStaticProps } from 'next'
+import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+import { client } from '../lib/contentful'
+import Compass from '@/components/Compass'
 
-import { useEffect, useState } from 'react'
+// 1. Define Contentful Schema
+type PrayerSkeleton = EntrySkeletonType<{
+  title: EntryFieldTypes.Text
+  slug: EntryFieldTypes.Text
+  body: EntryFieldTypes.RichText
+}>
 
-const shrineCoords = { lat: 32.9433, lon: 35.0922 } // Target direction
+type PrayerEntry = Entry<PrayerSkeleton>
 
-export default function Compass() {
-  const [angle, setAngle] = useState<number | null>(null)
-  const [heading, setHeading] = useState<number | null>(null)
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null)
+// 2. Static Props
+export const getStaticProps: GetStaticProps = async () => {
+  const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
 
-  // Convert radians to degrees
-  const toDeg = (rad: number) => (rad * 180) / Math.PI
-  const toRad = (deg: number) => (deg * Math.PI) / 180
-
-  // Calculate bearing from user to shrine
-  const calculateBearing = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const φ1 = toRad(lat1)
-    const φ2 = toRad(lat2)
-    const Δλ = toRad(lon2 - lon1)
-
-    const y = Math.sin(Δλ) * Math.cos(φ2)
-    const x = Math.cos(φ1) * Math.sin(φ2) -
-              Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
-
-    const θ = Math.atan2(y, x)
-    return (toDeg(θ) + 360) % 360
+  return {
+    props: {
+      prayers: res.items as PrayerEntry[],
+    },
+    revalidate: 60, // Optional: Rebuild every 60s
   }
+}
 
-  // Rotate arrow to show direction to shrine
-  const updateDirection = (lat: number, lon: number, deviceHeading: number | null) => {
-    const bearing = calculateBearing(lat, lon, shrineCoords.lat, shrineCoords.lon)
-    if (deviceHeading !== null) {
-      const relativeAngle = (bearing - deviceHeading + 360) % 360
-      setAngle(relativeAngle)
-    } else {
-      setAngle(bearing)
-    }
-  }
-
-  // On mount: get location + orientation
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords
-          setCoords({ lat: latitude, lon: longitude })
-          updateDirection(latitude, longitude, heading)
-        },
-        (err) => console.error('Geolocation error:', err),
-        { enableHighAccuracy: true }
-      )
-    }
-
-    const handleOrientation = (event: DeviceOrientationEvent) => {
-      const alpha = event.alpha // 0–360
-      if (typeof alpha === 'number') {
-        const deviceHeading = 360 - alpha // Convert to compass heading
-        setHeading(deviceHeading)
-        if (coords) updateDirection(coords.lat, coords.lon, deviceHeading)
-      }
-    }
-
-    window.addEventListener('deviceorientation', handleOrientation, true)
-
-    return () => {
-      window.removeEventListener('deviceorientation', handleOrientation)
-    }
-  }, [coords])
-
-  // On click: update based on latest position + heading
-  const handleClick = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude
-          const lon = pos.coords.longitude
-          setCoords({ lat, lon })
-          updateDirection(lat, lon, heading)
-        },
-        (err) => {
-          console.error("Geolocation error:", err)
-          alert("Failed to get location.")
-        }
-      )
-    } else {
-      alert("Geolocation not supported.")
-    }
-  }
-
+// 3. Home Page Component
+export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
   return (
-    <button onClick={handleClick} title="Tap to update direction">
-      <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center">
-        <div
-          className="text-xl transition-transform duration-300"
-          style={{
-            transform: angle !== null ? `rotate(${angle}deg)` : 'none',
-          }}
-        >
-          ↑
-        </div>
-      </div>
-    </button>
+    <>
+      <Head>
+        <title>Prayers</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/profile-circle.webp" />
+        <meta name="theme-color" content="#317EFB" />
+      </Head>
+
+      <main className="min-h-screen flex flex-col items-center px-4 pt-20 text-white">
+        {/* Header with title and compass */}
+        <header className="flex items-center justify-center gap-4 mb-10">
+          <Link href="/">
+            <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          </Link>
+          <div className="w-8 h-8">
+            <Compass />
+          </div>
+        </header>
+
+        {/* Post List */}
+        <ul className="space-y-4 w-full max-w-xl">
+          {prayers.map((p) => (
+            <li key={p.sys.id} className="text-center">
+              <Link
+                href={`/${p.fields.slug}`}
+                className="text-blue-400 hover:underline text-lg"
+              >
+                {typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
   )
 }
