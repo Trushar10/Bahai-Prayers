@@ -5,7 +5,7 @@ import { Entry, EntrySkeletonType, EntryFieldTypes } from 'contentful'
 import { client } from '../lib/contentful'
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import Head from 'next/head'
-import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { Document } from '@contentful/rich-text-types'
 
 type PrayerSkeleton = EntrySkeletonType<{
@@ -16,7 +16,7 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>
 
-// Static paths for all slugs
+// Fetch paths for all prayers
 export const getStaticPaths: GetStaticPaths = async () => {
   const res = await client.getEntries<PrayerSkeleton>({
     content_type: 'prayer',
@@ -28,11 +28,11 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
   return {
     paths,
-    fallback: false, // change to 'blocking' if needed for dynamic fallback
+    fallback: false,
   }
 }
 
-// Static props for each page
+// Fetch data for a single prayer
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const res = await client.getEntries<PrayerSkeleton>({
     content_type: 'prayer',
@@ -47,38 +47,43 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     props: {
       prayer: res.items[0] as PrayerEntry,
     },
-    revalidate: 60, // Optional: re-generate in background after 60s
+    revalidate: 60,
   }
 }
 
 export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
+  const router = useRouter()
+
   return (
     <>
       <Head>
         <title>{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#317EFB" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/profile-circle.webp" />
       </Head>
 
-      <main className="text-white p-6 max-w-2xl mx-auto">
-        {/* Header with title */}
-        <header className="flex items-center justify-center gap-4 mb-10">
-          <Link href="/">
-            <h1 className="text-3xl font-bold text-center">Prayers</h1>
-          </Link>
-        </header>
-
-        {/* Individual prayer title */}
-        <h2 className="text-2xl font-bold mb-4">
-          {typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}
-        </h2>
-
-        <div>
-          {documentToReactComponents(prayer.fields.body as Document)}
+      <header className="header">
+        <div className="header-content">
+          <button className="back-btn" onClick={() => router.back()}>
+            ← Back
+          </button>
+          <div className="title">{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</div>
+          <div className="spacer" />
         </div>
-      </main>
+      </header>
+
+      <div className="container show-single-post">
+        <main className="single-post">
+          <article className="post-content">
+            <h1>{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</h1>
+            <div className="content">
+              {documentToReactComponents(prayer.fields.body as Document)}
+            </div>
+          </article>
+        </main>
+      </div>
     </>
   )
 }
-

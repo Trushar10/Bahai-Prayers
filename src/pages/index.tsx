@@ -1,10 +1,9 @@
 import Head from 'next/head'
-import Link from 'next/link'
 import { GetStaticProps } from 'next'
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { client } from '../lib/contentful'
+import { useRouter } from 'next/router'
 
-// 1. Define Contentful Schema
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
@@ -13,7 +12,6 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>
 
-// 2. Static Props
 export const getStaticProps: GetStaticProps = async () => {
   const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
 
@@ -21,12 +19,17 @@ export const getStaticProps: GetStaticProps = async () => {
     props: {
       prayers: res.items as PrayerEntry[],
     },
-    revalidate: 60, // Optional: Rebuild every 60s
+    revalidate: 60,
   }
 }
 
-// 3. Home Page Component
 export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
+  const router = useRouter()
+
+  const handleClick = (slug: string) => {
+    router.push(`/${slug}`)
+  }
+
   return (
     <>
       <Head>
@@ -37,28 +40,40 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
         <meta name="theme-color" content="#317EFB" />
       </Head>
 
-      <main className="min-h-screen flex flex-col items-center px-4 pt-20 text-white">
-        {/* Header with title and compass */}
-        <header className="flex items-center justify-center gap-4 mb-10">
-          <Link href="/">
-            <h1 className="text-3xl font-bold text-center">Prayers</h1>
-          </Link>         
-        </header>
+      <header className="header">
+        <div className="header-content">
+          <div className="title">Prayers</div>
+          <div className="spacer" />
+        </div>
+      </header>
 
-        {/* Post List */}
-        <ul className="space-y-4 w-full max-w-xl">
-          {prayers.map((p) => (
-            <li key={p.sys.id} className="text-center">
-              <Link
-                href={`/${p.fields.slug}`}
-                className="text-blue-400 hover:underline text-lg"
+      <div className="container">
+        <main className="homepage">
+          <div className="post-list">
+            {prayers.map((p) => (
+              <div
+                key={p.sys.id}
+                className="post-item"
+                onClick={() => {
+                  if (typeof p.fields.slug === 'string') {
+                    handleClick(p.fields.slug)
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') if (typeof p.fields.slug === 'string') {
+                    handleClick(p.fields.slug)
+                  }
+                }}
               >
-                {typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </main>
+               <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
+
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
     </>
   )
 }

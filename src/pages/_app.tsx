@@ -1,4 +1,4 @@
-import '@/styles/globals.css'
+import '@/styles/prayers.css'
 import type { AppProps } from 'next/app'
 import { Rasa } from 'next/font/google'
 

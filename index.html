@@ -3,143 +3,554 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Prayer Web App</title>
-		<link rel="manifest" href="/manifest.json" />
+		<title>Prayers</title>
 		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
 			body {
-				font-family: Arial, sans-serif;
-				background-color: #1a1a1a;
-				color: #ffffff;
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				padding-top: 5rem;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+					Roboto, sans-serif;
+				background-color: #ffffff;
+				color: #212529;
+				line-height: 1.5;
 			}
 
-			header {
-				display: flex;
-				align-items: center;
-				gap: 1.5rem;
-				font-size: 2.5rem;
-				font-weight: bold;
-				margin-bottom: 2rem;
+			/* Header */
+			.header {
+				background-color: #ffffff;
+				border-bottom: 1px solid #e9ecef;
+				position: sticky;
+				top: 0;
+				z-index: 100;
 			}
 
-			.compass {
-				width: 40px;
-				height: 40px;
-				border: 2px solid #fff;
-				border-radius: 50%;
+			.header-content {
 				position: relative;
-				transform: rotate(0deg);
-				transition: transform 0.5s ease;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 16px 24px;
+				max-width: 480px;
+				margin: 0 auto;
 			}
 
-			.needle {
-				position: absolute;
-				top: 4px;
-				left: 50%;
-				width: 2px;
-				height: 30px;
-				background: red;
-				transform: translateX(-50%);
-				transform-origin: bottom;
+			.back-btn {
+				background: none;
+				border: none;
+				font-size: 16px;
+				color: #007bff;
+				cursor: pointer;
+				padding: 8px 0;
+				display: none;
+			}
+
+			.title {
+				font-size: 18px;
+				font-weight: 600;
+				color: #212529;
+			}
+
+			.spacer {
+				width: 40px;
+			}
+
+			/* Container */
+			.container {
+				max-width: 480px;
+				margin: 0 auto;
+				min-height: calc(100vh - 57px);
+				background-color: #ffffff;
+			}
+
+			/* Homepage */
+			.homepage {
+				display: block;
+				padding: 24px 0;
 			}
 
 			.post-list {
-				width: 100%;
-				max-width: 600px;
-				display: flex;
-				flex-direction: column;
-				gap: 1.5rem;
+				padding: 0 24px;
 			}
 
-			.post a {
+			.post-item {
+				display: block;
+				padding: 18px 0;
+				border-bottom: 1px solid #f1f3f4;
 				text-decoration: none;
-				color: #ffffff;
-				font-size: 1.2rem;
-				font-weight: 500;
-				transition: all 0.2s ease;
+				color: #212529;
+				cursor: pointer;
+				transition: background-color 0.2s ease;
 			}
 
-			.post a:hover {
-				text-decoration: underline;
+			.post-item:hover {
+				background-color: #f8f9fa;
+				margin: 0 -24px;
+				padding-left: 24px;
+				padding-right: 24px;
+			}
+
+			.post-item:last-child {
+				border-bottom: none;
+			}
+
+			.post-item h3 {
+				font-size: 17px;
+				font-weight: 500;
+				color: #212529;
+				line-height: 1.3;
+			}
+
+			/* Single Post */
+			.single-post {
+				display: none;
+				padding: 32px 24px;
+			}
+
+			.post-content h1 {
+				font-size: 28px;
+				font-weight: 700;
+				margin-bottom: 24px;
+				color: #212529;
+				line-height: 1.2;
+			}
+
+			.post-content .content {
+				font-size: 17px;
+				line-height: 1.6;
+				color: #374151;
+			}
+
+			.post-content .content p {
+				margin-bottom: 20px;
+			}
+
+			.post-content .content p:last-child {
+				margin-bottom: 0;
+			}
+
+			.author {
+				margin-top: 32px;
+				padding-top: 20px;
+				border-top: 1px solid #e5e7eb;
+				font-size: 15px;
+				color: #6b7280;
+				font-style: italic;
+			}
+
+			/* Show/Hide states */
+			.show-single-post .homepage {
+				display: none;
+			}
+
+			.show-single-post .single-post {
+				display: block;
+			}
+
+			.show-single-post .back-btn {
+				display: block;
+				position: absolute;
+				left: 20px;
+			}
+
+			/* Responsive adjustments */
+			@media (max-width: 480px) {
+				.header-content {
+					padding: 16px 20px;
+				}
+
+				.homepage {
+					padding: 20px 0;
+				}
+
+				.post-list {
+					padding: 0 20px;
+				}
+
+				.post-item:hover {
+					margin: 0 -20px;
+					padding-left: 20px;
+					padding-right: 20px;
+				}
+
+				.single-post {
+					padding: 28px 20px;
+				}
+
+				.post-content h1 {
+					font-size: 24px;
+				}
 			}
 		</style>
 	</head>
 	<body>
-		<header>
-			Prayer App
-			<div class="compass" id="compass">
-				<div class="needle"></div>
+		<!-- Header -->
+		<header class="header">
+			<div class="header-content">
+				<button class="back-btn" onclick="showHomepage()">
+					← Back
+				</button>
+				<div class="title" id="header-title">Prayers</div>
+				<div class="spacer"></div>
 			</div>
 		</header>
 
-		<section class="post-list">
-			<div class="post">
-				<a href="/prayer/morning-prayer">Morning Prayer</a>
-			</div>
-			<div class="post">
-				<a href="/prayer/evening-prayer">Evening Prayer</a>
-			</div>
-			<div class="post">
-				<a href="/prayer/special-intention">Special Intention</a>
-			</div>
-			<div class="post">
-				<a href="/prayer/gratitude">Gratitude</a>
-			</div>
-		</section>
+		<!-- Container -->
+		<div class="container">
+			<!-- Homepage -->
+			<main class="homepage" id="homepage">
+				<div class="post-list">
+					<div class="post-item" onclick="showPost('Morning Prayer')">
+						<h3>Morning Prayer</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Evening Reflection')"
+					>
+						<h3>Evening Reflection</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Strength')"
+					>
+						<h3>Prayer for Strength</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer of Gratitude')"
+					>
+						<h3>Prayer of Gratitude</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Peace')"
+					>
+						<h3>Prayer for Peace</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Guidance')"
+					>
+						<h3>Prayer for Guidance</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Healing')"
+					>
+						<h3>Prayer for Healing</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Family')"
+					>
+						<h3>Prayer for Family</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Forgiveness')"
+					>
+						<h3>Prayer for Forgiveness</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Wisdom')"
+					>
+						<h3>Prayer for Wisdom</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Protection')"
+					>
+						<h3>Prayer for Protection</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Comfort')"
+					>
+						<h3>Prayer for Comfort</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Hope')"
+					>
+						<h3>Prayer for Hope</h3>
+					</div>
+
+					<div
+						class="post-item"
+						onclick="showPost('Prayer for Patience')"
+					>
+						<h3>Prayer for Patience</h3>
+					</div>
+
+					<div class="post-item" onclick="showPost('Prayer for Joy')">
+						<h3>Prayer for Joy</h3>
+					</div>
+				</div>
+			</main>
+
+			<!-- Single Post -->
+			<main class="single-post" id="single-post">
+				<article class="post-content">
+					<h1 id="post-title">Morning Prayer</h1>
+					<div class="content" id="post-text">
+						<p>
+							As the sun rises and a new day begins, I come before
+							You with a grateful heart. Thank You for the gift of
+							life, for the breath in my lungs, and for the
+							opportunities that lie ahead.
+						</p>
+
+						<p>
+							Guide my steps today, Lord. Help me to walk in Your
+							ways and to be a light to those around me. Give me
+							strength to face any challenges that may come, and
+							wisdom to make decisions that honor You.
+						</p>
+
+						<p>
+							May my words be kind, my actions be just, and my
+							heart be filled with love. Help me to see the good
+							in others and to respond with compassion and
+							understanding.
+						</p>
+
+						<p>
+							Bless my family, my friends, and all those I will
+							encounter today. Keep them safe and shower them with
+							Your love. Use me as an instrument of Your peace
+							wherever I go.
+						</p>
+
+						<p>
+							I surrender this day to You, trusting in Your
+							perfect plan for my life. Thank You for Your
+							unfailing love and constant presence. Amen.
+						</p>
+					</div>
+					<div class="author" id="post-author">
+						Traditional Prayer
+					</div>
+				</article>
+			</main>
+		</div>
 
 		<script>
-			const shrineLat = 32.9433;
-			const shrineLon = 35.0922;
+			// Prayer data
+			const prayers = {
+				'Morning Prayer': {
+					content: `<p>As the sun rises and a new day begins, I come before You with a grateful heart. Thank You for the gift of life, for the breath in my lungs, and for the opportunities that lie ahead.</p>
+                
+                <p>Guide my steps today, Lord. Help me to walk in Your ways and to be a light to those around me. Give me strength to face any challenges that may come, and wisdom to make decisions that honor You.</p>
+                
+                <p>May my words be kind, my actions be just, and my heart be filled with love. Help me to see the good in others and to respond with compassion and understanding.</p>
+                
+                <p>Bless my family, my friends, and all those I will encounter today. Keep them safe and shower them with Your love. Use me as an instrument of Your peace wherever I go.</p>
+                
+                <p>I surrender this day to You, trusting in Your perfect plan for my life. Thank You for Your unfailing love and constant presence. Amen.</p>`,
+					author: 'Traditional Prayer',
+				},
+				'Evening Reflection': {
+					content: `<p>As this day comes to a close, I pause to reflect on Your goodness and mercy. Thank You for walking with me through every moment, both the joyful and the challenging ones.</p>
+                
+                <p>I ask for Your forgiveness for any words or actions that may have caused harm today. Help me to learn from my mistakes and to grow in wisdom and compassion.</p>
+                
+                <p>I'm grateful for the blessings You've provided - for food, shelter, health, and the love of family and friends. Thank You for the small miracles that often go unnoticed.</p>
+                
+                <p>As I prepare for rest, I pray for peaceful sleep and restoration of body, mind, and spirit. Watch over my loved ones tonight and keep them in Your care.</p>
+                
+                <p>Tomorrow is a new day, a fresh start. Fill me with hope and renewed purpose. Help me to wake with gratitude and enthusiasm for the opportunities ahead. Amen.</p>`,
+					author: 'Evening Devotion',
+				},
+				'Prayer for Strength': {
+					content: `<p>Heavenly Father, in this moment of need, I come to You seeking strength. Life's challenges seem overwhelming, and I feel weak and uncertain about the path ahead.</p>
+                
+                <p>You are my refuge and my fortress, my God in whom I trust. When I am weary, You give me rest. When I am afraid, You provide courage. When I doubt, You renew my faith.</p>
+                
+                <p>Help me to remember that Your strength is made perfect in my weakness. Remind me that I can do all things through Christ who strengthens me.</p>
+                
+                <p>Fill me with Your peace that surpasses all understanding. Help me to cast all my anxieties on You, knowing that You care for me deeply.</p>
+                
+                <p>Grant me the serenity to accept what I cannot change, the courage to change what I can, and the wisdom to know the difference. In Your holy name I pray. Amen.</p>`,
+					author: 'Prayer for Difficult Times',
+				},
+				'Prayer of Gratitude': {
+					content: `<p>Gracious God, my heart overflows with thanksgiving for Your countless blessings. You have been so good to me, far beyond what I deserve or could ever imagine.</p>
+                
+                <p>Thank You for the gift of life itself, for health and strength, for a mind that can think and a heart that can love. Thank You for family and friends who enrich my journey.</p>
+                
+                <p>I'm grateful for the beauty of creation - for sunrises and sunsets, for the changing seasons, for the intricate details of nature that reveal Your artistry and love.</p>
+                
+                <p>Thank You for providing for my needs, for shelter and food, for work and purpose. Even in difficult times, You have been faithful and present.</p>
+                
+                <p>Help me to live with a grateful heart every day, not taking Your blessings for granted. May my life be a continuous song of praise and thanksgiving to You. Amen.</p>`,
+					author: 'Thanksgiving Prayer',
+				},
+				'Prayer for Peace': {
+					content: `<p>Prince of Peace, in a world filled with conflict and turmoil, I come to You seeking the peace that only You can provide. Calm the storms within my heart and mind.</p>
+                
+                <p>Help me to be a peacemaker in my relationships, speaking words of reconciliation rather than division. Give me the grace to forgive those who have hurt me.</p>
+                
+                <p>When anger rises within me, help me to respond with gentleness. When misunderstandings occur, give me wisdom to communicate with love and patience.</p>
+                
+                <p>I pray for peace in our communities, our nations, and our world. Break down the walls of hatred and prejudice that divide us. Help us to see each other as Your children.</p>
+                
+                <p>Let Your peace rule in my heart and overflow to all those around me. May I be an instrument of Your peace wherever I go. Amen.</p>`,
+					author: 'Prayer for Harmony',
+				},
+				'Prayer for Guidance': {
+					content: `<p>Heavenly Father, I stand at a crossroads, unsure of which path to take. Your word promises that You will direct my steps, and I trust in that promise today.</p>
+                
+                <p>Grant me wisdom beyond my years and understanding beyond my experience. Help me to see situations clearly and to discern Your will in all things.</p>
+                
+                <p>Open doors that should be opened and close those that should remain shut. Give me courage to step forward when You call and patience to wait when You ask me to be still.</p>
+                
+                <p>Surround me with wise counselors who will speak truth in love. Help me to listen not just with my ears but with my heart, sensitive to Your gentle voice.</p>
+                
+                <p>I surrender my plans to Your perfect will, trusting that Your ways are higher than my ways. Lead me in the path of righteousness for Your name's sake. Amen.</p>`,
+					author: 'Prayer for Direction',
+				},
+				'Prayer for Healing': {
+					content: `<p>Great Physician, I come to You in faith, believing in Your power to heal. You know every pain I carry, every wound that needs Your touch, both seen and unseen.</p>
+                
+                <p>I pray for physical healing - restore what is broken, strengthen what is weak, and bring wholeness to my body. Guide the hands of doctors and caregivers.</p>
+                
+                <p>I also pray for emotional healing. Mend my broken heart, calm my anxious thoughts, and lift the weight of depression or fear. Fill me with Your joy and peace.</p>
+                
+                <p>Heal my relationships that have been damaged by hurt or misunderstanding. Give me the grace to forgive and the courage to seek forgiveness where needed.</p>
+                
+                <p>Whether You choose to heal instantly or gradually, help me to trust in Your perfect timing and wisdom. Use this experience to draw me closer to You. Amen.</p>`,
+					author: 'Prayer for Restoration',
+				},
+				'Prayer for Family': {
+					content: `<p>Loving Father, You have blessed me with the precious gift of family. I lift each member before You, asking for Your protection and guidance in their lives.</p>
+                
+                <p>Strengthen the bonds between us. Help us to love unconditionally, forgive quickly, and support each other through all seasons of life.</p>
+                
+                <p>Watch over our children, guiding them as they grow and learn. Give them wisdom to make good choices and surround them with positive influences.</p>
+                
+                <p>Bless our elderly family members with health and comfort. Help us to honor them and learn from their wisdom and experience.</p>
+                
+                <p>When conflicts arise, help us to resolve them with grace and understanding. May our home be a place of love, laughter, and peace - a reflection of Your love for us. Amen.</p>`,
+					author: 'Family Blessing',
+				},
+				'Prayer for Forgiveness': {
+					content: `<p>Merciful God, I come before You with a heavy heart, acknowledging the wrongs I have committed. I have fallen short of Your glory and hurt others along the way.</p>
+                
+                <p>Please forgive me for my sins, both those I remember and those I have forgotten. Cleanse my heart and make it pure again. Create in me a clean heart and renew a right spirit within me.</p>
+                
+                <p>I also struggle to forgive those who have wronged me. Help me to release the bitterness and resentment that I've been carrying. Give me the grace to forgive as You have forgiven me.</p>
+                
+                <p>Heal the relationships that have been broken by unforgiveness. Open doors for reconciliation where possible, and help me to move forward in peace.</p>
+                
+                <p>Thank You for Your endless mercy and grace. Help me to live in the freedom that comes from being forgiven and forgiving others. Amen.</p>`,
+					author: 'Prayer of Repentance',
+				},
+				'Prayer for Wisdom': {
+					content: `<p>God of all wisdom, You are the source of all knowledge and understanding. I come to You seeking wisdom for the decisions I must make and the challenges I face.</p>
+                
+                <p>Grant me discernment to distinguish between right and wrong, good and better, temporal and eternal. Help me to see beyond the surface to the heart of matters.</p>
+                
+                <p>Give me the humility to admit when I don't know something and the courage to seek counsel from those who are wiser than I am.</p>
+                
+                <p>Help me to apply the wisdom You give me, not just to know what is right but to do what is right. May my life reflect the wisdom that comes from above.</p>
+                
+                <p>I pray for wisdom in my relationships, my work, my finances, and every area of my life. Guide me in Your truth and teach me Your ways. Amen.</p>`,
+					author: 'Prayer for Understanding',
+				},
+				'Prayer for Protection': {
+					content: `<p>Almighty God, You are my shield and my fortress. I come to You seeking Your divine protection over my life and the lives of my loved ones.</p>
+                
+                <p>Guard us from physical harm and danger. Send Your angels to watch over us wherever we go. Keep us safe on the roads, in our homes, and in all our activities.</p>
+                
+                <p>Protect us from spiritual attacks and the schemes of the enemy. Surround us with Your light and let no weapon formed against us prosper.</p>
+                
+                <p>Shield our minds from negative thoughts, our hearts from discouragement, and our spirits from despair. Fill us with Your strength and courage.</p>
+                
+                <p>We trust in Your promises of protection and place ourselves under Your mighty wings. Thank You for being our refuge and our safe haven. Amen.</p>`,
+					author: 'Prayer for Safety',
+				},
+				'Prayer for Comfort': {
+					content: `<p>God of all comfort, in this time of sorrow and pain, I turn to You for the peace that only You can provide. My heart is heavy and my spirit is troubled.</p>
+                
+                <p>You have promised to be close to the brokenhearted and to save those who are crushed in spirit. I claim that promise today and ask for Your comforting presence.</p>
+                
+                <p>Wrap me in Your love like a warm blanket. Let me feel Your arms around me, holding me through this difficult season. Give me the strength I need to face each day.</p>
+                
+                <p>Help me to find hope in the midst of despair, light in the darkness, and joy that can come in the morning after a night of weeping.</p>
+                
+                <p>Thank You for walking with me through this valley. I trust that You will bring beauty from these ashes and turn my mourning into dancing. Amen.</p>`,
+					author: 'Prayer in Times of Sorrow',
+				},
+				'Prayer for Hope': {
+					content: `<p>God of hope, when circumstances seem overwhelming and the future appears uncertain, I anchor my soul in Your promises and Your faithfulness.</p>
+                
+                <p>You are the God who makes all things new, who brings beauty from ashes and turns mourning into joy. Help me to see beyond my current situation to the good plans You have for me.</p>
+                
+                <p>Renew my strength like the eagles. Help me to soar above my problems and see them from Your perspective. Fill me with confident expectation of Your goodness.</p>
+                
+                <p>When doubt creeps in, remind me of all the ways You've been faithful in the past. Help me to trust in Your timing and Your ways, even when I cannot understand.</p>
+                
+                <p>Let hope rise in my heart like the dawn of a new day. May I be a beacon of hope to others who are struggling. In Your precious name I pray. Amen.</p>`,
+					author: 'Prayer for Renewed Faith',
+				},
+				'Prayer for Patience': {
+					content: `<p>Lord, I confess that patience is not my strong suit. In a world that moves so fast, I often find myself frustrated when things don't happen according to my timeline.</p>
+                
+                <p>Teach me to wait on You with grace and trust. Help me to understand that Your timing is perfect, even when it doesn't align with my desires.</p>
+                
+                <p>Give me patience with others who may think, act, or move differently than I do. Help me to extend the same grace to them that You extend to me daily.</p>
+                
+                <p>When I'm tempted to rush ahead of Your plan, hold me back. When I'm discouraged by delays, remind me that You are working all things together for my good.</p>
+                
+                <p>Develop in me the fruit of patience - not just the ability to wait, but to wait well, with peace and trust in Your goodness. Amen.</p>`,
+					author: 'Prayer for Endurance',
+				},
+				'Prayer for Joy': {
+					content: `<p>Father of lights, You are the source of all true joy. Even in difficult circumstances, You offer a joy that transcends understanding and circumstances.</p>
+                
+                <p>Help me to find joy in the simple things - in a sunrise, in laughter with friends, in quiet moments of peace. Open my eyes to see Your goodness all around me.</p>
+                
+                <p>When sadness threatens to overwhelm me, remind me that joy comes from You, not from my circumstances. Let Your joy be my strength.</p>
+                
+                <p>Fill my heart with gratitude for Your many blessings. Help me to celebrate the victories, both big and small, that You bring into my life.</p>
+                
+                <p>Let my joy be contagious. Use me to bring smiles to others and to share the hope and happiness that comes from knowing You. May my life be a testimony of Your goodness. Amen.</p>`,
+					author: 'Prayer for Gladness',
+				},
+			};
 
-			function toRadians(deg) {
-				return (deg * Math.PI) / 180;
+			function showPost(title) {
+				document.body.classList.add('show-single-post');
+				document.getElementById('header-title').textContent = title;
+				document.getElementById('post-title').textContent = title;
+
+				if (prayers[title]) {
+					document.getElementById('post-text').innerHTML =
+						prayers[title].content;
+					document.getElementById('post-author').textContent =
+						'- ' + prayers[title].author;
+				}
 			}
 
-			function getBearing(lat1, lon1, lat2, lon2) {
-				const φ1 = toRadians(lat1);
-				const φ2 = toRadians(lat2);
-				const Δλ = toRadians(lon2 - lon1);
-				const y = Math.sin(Δλ) * Math.cos(φ2);
-				const x =
-					Math.cos(φ1) * Math.sin(φ2) -
-					Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-				const θ = Math.atan2(y, x);
-				return ((θ * 180) / Math.PI + 360) % 360;
-			}
-
-			function rotateCompass(bearing) {
-				const compass = document.getElementById('compass');
-				compass.style.transform = `rotate(${bearing}deg)`;
-			}
-
-			if (navigator.geolocation) {
-				navigator.geolocation.getCurrentPosition((position) => {
-					const userLat = position.coords.latitude;
-					const userLon = position.coords.longitude;
-					const bearingToShrine = getBearing(
-						userLat,
-						userLon,
-						shrineLat,
-						shrineLon
-					);
-
-					window.addEventListener(
-						'deviceorientationabsolute',
-						(event) => {
-							const deviceDirection = event.alpha;
-							if (deviceDirection !== null) {
-								const angle = bearingToShrine - deviceDirection;
-								rotateCompass(angle);
-							}
-						},
-						true
-					);
-				});
-			} else {
-				alert('Geolocation not supported');
+			function showHomepage() {
+				document.body.classList.remove('show-single-post');
+				document.getElementById('header-title').textContent = 'Prayers';
 			}
 		</script>
 	</body>
