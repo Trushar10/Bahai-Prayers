@@ -15,7 +15,10 @@ type PrayerSkeleton = EntrySkeletonType<{
 type PrayerEntry = Entry<PrayerSkeleton>
 
 export const getStaticProps: GetStaticProps = async () => {
-  const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
+  const res = await client.getEntries<PrayerSkeleton>({
+    content_type: 'prayer',
+    order: ['sys.createdAt'] // oldest first
+  })
 
   return {
     props: {
@@ -24,6 +27,7 @@ export const getStaticProps: GetStaticProps = async () => {
     revalidate: 60,
   }
 }
+
 
 export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
   const router = useRouter()
