@@ -7,6 +7,8 @@ import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { Document } from '@contentful/rich-text-types'
+import ThemeToggle from '../components/ThemeToggle'
+
 
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
@@ -71,6 +73,7 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
           </button>
           <div className="title">{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</div>
           <div className="spacer" />
+          <ThemeToggle />
         </div>
       </header>
 

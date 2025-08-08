@@ -3,6 +3,8 @@ import { GetStaticProps } from 'next'
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { client } from '../lib/contentful'
 import { useRouter } from 'next/router'
+import ThemeToggle from '../components/ThemeToggle'
+
 
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
@@ -44,6 +46,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
         <div className="header-content">
           <div className="title">Prayers</div>
           <div className="spacer" />
+          <ThemeToggle />
         </div>
       </header>
 
