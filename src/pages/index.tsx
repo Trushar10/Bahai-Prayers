@@ -44,8 +44,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
 
       <header className="header">
         <div className="header-content">
-          <div className="title">Prayers</div>
-          <div className="spacer" />
+          <div className="title">Prayers</div>          
           <ThemeToggle />
         </div>
       </header>

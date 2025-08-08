@@ -72,7 +72,6 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
             ← Back
           </button>
           <div className="title">{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</div>
-          <div className="spacer" />
           <ThemeToggle />
         </div>
       </header>

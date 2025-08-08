@@ -12,12 +12,12 @@
 }
 
 :root[data-theme='dark'] {
-	--bg: #121212;
+	--bg: #1e293b;
 	--text: #f1f1f1;
-	--header-bg: #1e1e1e;
+	--header-bg: #0f172a;
 	--header-border: #333;
 	--link: #4dabf7;
-	--post-border: #2a2a2a;
+	--post-border: #rgb(71, 85, 105);
 	--hover-bg: #1f1f1f;
 	--post-subtext: #d1d5db;
 	--author-text: #9ca3af;
