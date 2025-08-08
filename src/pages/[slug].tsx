@@ -5,6 +5,7 @@ import { Entry, EntrySkeletonType, EntryFieldTypes } from 'contentful'
 import { client } from '../lib/contentful'
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import Head from 'next/head'
+import Link from 'next/link'
 import { Document } from '@contentful/rich-text-types'
 
 type PrayerSkeleton = EntrySkeletonType<{
@@ -61,13 +62,23 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
       </Head>
 
       <main className="text-white p-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">
+        {/* Header with title */}
+        <header className="flex items-center justify-center gap-4 mb-10">
+          <Link href="/">
+            <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          </Link>
+        </header>
+
+        {/* Individual prayer title */}
+        <h2 className="text-2xl font-bold mb-4">
           {typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}
-        </h1>
-        <div>̀
+        </h2>
+
+        <div>
           {documentToReactComponents(prayer.fields.body as Document)}
         </div>
       </main>
     </>
   )
 }
+

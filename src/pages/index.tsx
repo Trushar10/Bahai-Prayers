@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { GetStaticProps } from 'next'
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { client } from '../lib/contentful'
-import Compass from '@/components/Compass'
 
 // 1. Define Contentful Schema
 type PrayerSkeleton = EntrySkeletonType<{
@@ -43,10 +42,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
         <header className="flex items-center justify-center gap-4 mb-10">
           <Link href="/">
             <h1 className="text-3xl font-bold text-center">Prayers</h1>
-          </Link>
-          <div className="w-8 h-8">
-            <Compass />
-          </div>
+          </Link>         
         </header>
 
         {/* Post List */}
