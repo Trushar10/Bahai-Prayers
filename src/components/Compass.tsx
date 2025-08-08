@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-// Baháʼu'lláh Shrine coordinates
+// Shrine coordinates
 const SHRINE_LAT = 32.9433
 const SHRINE_LNG = 35.0922
 
 function degToRad(deg: number) {
   return (deg * Math.PI) / 180
+}
+
+function radToDeg(rad: number) {
+  return (rad * 180) / Math.PI
 }
 
 function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -19,32 +23,58 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
   const x = Math.cos(φ1) * Math.sin(φ2) -
             Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
   const θ = Math.atan2(y, x)
-  return (θ * 180) / Math.PI
+  return (radToDeg(θ) + 360) % 360
 }
 
 export default function Compass() {
-  const arrowRef = useRef<HTMLDivElement>(null)
-  const [bearing, setBearing] = useState(0)
+  const [angle, setAngle] = useState(0)
+  const shrineBearingRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!navigator.geolocation) return
+    let currentLat = 0
+    let currentLng = 0
 
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude, longitude } = pos.coords
-      const b = calculateBearing(latitude, longitude, SHRINE_LAT, SHRINE_LNG)
-      setBearing(b)
-    })
+    // Get user's current location
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        currentLat = pos.coords.latitude
+        currentLng = pos.coords.longitude
+
+        // Calculate shrine bearing
+        const bearing = calculateBearing(currentLat, currentLng, SHRINE_LAT, SHRINE_LNG)
+        shrineBearingRef.current = bearing
+      },
+      (err) => {
+        console.error('Geolocation error:', err)
+      },
+      { enableHighAccuracy: true }
+    )
+
+    // Listen to device orientation
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const heading = event.alpha // degrees from North (0°)
+      if (heading !== null && shrineBearingRef.current !== null) {
+        const relativeAngle = (shrineBearingRef.current - heading + 360) % 360
+        setAngle(relativeAngle)
+      }
+    }
+
+    window.addEventListener('deviceorientationabsolute', handleOrientation, true)
+    window.addEventListener('deviceorientation', handleOrientation, true)
+
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation)
+      window.removeEventListener('deviceorientation', handleOrientation)
+    }
   }, [])
 
   return (
     <div
       className="w-8 h-8 rounded-full border border-white flex items-center justify-center"
-      style={{ transform: `rotate(${bearing}deg)` }}
+      style={{ transform: `rotate(${angle}deg)` }}
       title="Points to Baháʼu'lláh Shrine"
     >
-      <div ref={arrowRef} className="text-white text-sm">
-        ↑
-      </div>
+      <div className="text-white text-sm">↑</div>
     </div>
   )
 }
