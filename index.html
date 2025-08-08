@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Prayer Web App</title>
+		<link rel="manifest" href="/manifest.json" />
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #1a1a1a;
+				color: #ffffff;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				padding-top: 5rem;
+			}
+
+			header {
+				display: flex;
+				align-items: center;
+				gap: 1.5rem;
+				font-size: 2.5rem;
+				font-weight: bold;
+				margin-bottom: 2rem;
+			}
+
+			.compass {
+				width: 40px;
+				height: 40px;
+				border: 2px solid #fff;
+				border-radius: 50%;
+				position: relative;
+				transform: rotate(0deg);
+				transition: transform 0.5s ease;
+			}
+
+			.needle {
+				position: absolute;
+				top: 4px;
+				left: 50%;
+				width: 2px;
+				height: 30px;
+				background: red;
+				transform: translateX(-50%);
+				transform-origin: bottom;
+			}
+
+			.post-list {
+				width: 100%;
+				max-width: 600px;
+				display: flex;
+				flex-direction: column;
+				gap: 1.5rem;
+			}
+
+			.post a {
+				text-decoration: none;
+				color: #ffffff;
+				font-size: 1.2rem;
+				font-weight: 500;
+				transition: all 0.2s ease;
+			}
+
+			.post a:hover {
+				text-decoration: underline;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			Prayer App
+			<div class="compass" id="compass">
+				<div class="needle"></div>
+			</div>
+		</header>
+
+		<section class="post-list">
+			<div class="post">
+				<a href="/prayer/morning-prayer">Morning Prayer</a>
+			</div>
+			<div class="post">
+				<a href="/prayer/evening-prayer">Evening Prayer</a>
+			</div>
+			<div class="post">
+				<a href="/prayer/special-intention">Special Intention</a>
+			</div>
+			<div class="post">
+				<a href="/prayer/gratitude">Gratitude</a>
+			</div>
+		</section>
+
+		<script>
+			const shrineLat = 32.9433;
+			const shrineLon = 35.0922;
+
+			function toRadians(deg) {
+				return (deg * Math.PI) / 180;
+			}
+
+			function getBearing(lat1, lon1, lat2, lon2) {
+				const φ1 = toRadians(lat1);
+				const φ2 = toRadians(lat2);
+				const Δλ = toRadians(lon2 - lon1);
+				const y = Math.sin(Δλ) * Math.cos(φ2);
+				const x =
+					Math.cos(φ1) * Math.sin(φ2) -
+					Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+				const θ = Math.atan2(y, x);
+				return ((θ * 180) / Math.PI + 360) % 360;
+			}
+
+			function rotateCompass(bearing) {
+				const compass = document.getElementById('compass');
+				compass.style.transform = `rotate(${bearing}deg)`;
+			}
+
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition((position) => {
+					const userLat = position.coords.latitude;
+					const userLon = position.coords.longitude;
+					const bearingToShrine = getBearing(
+						userLat,
+						userLon,
+						shrineLat,
+						shrineLon
+					);
+
+					window.addEventListener(
+						'deviceorientationabsolute',
+						(event) => {
+							const deviceDirection = event.alpha;
+							if (deviceDirection !== null) {
+								const angle = bearingToShrine - deviceDirection;
+								rotateCompass(angle);
+							}
+						},
+						true
+					);
+				});
+			} else {
+				alert('Geolocation not supported');
+			}
+		</script>
+	</body>
+</html>

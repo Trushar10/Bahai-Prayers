@@ -64,7 +64,7 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
         <h1 className="text-2xl font-bold mb-4">
           {typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}
         </h1>
-        <div>
+        <div>̀
           {documentToReactComponents(prayer.fields.body as Document)}
         </div>
       </main>
