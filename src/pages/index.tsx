@@ -41,7 +41,9 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
       <main className="min-h-screen flex flex-col items-center px-4 pt-20 text-white">
         {/* Header with title and compass */}
         <header className="flex items-center justify-center gap-4 mb-10">
-          <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          <Link href="/">
+            <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          </Link>
           <div className="w-8 h-8">
             <Compass />
           </div>
