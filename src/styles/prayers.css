@@ -182,6 +182,7 @@ body {
 	padding: 6px;
 	margin-left: auto;
 	cursor: pointer;
+	color: var(--text); /* Icons adapt to theme color */
 }
 
 /* Responsive adjustments */
