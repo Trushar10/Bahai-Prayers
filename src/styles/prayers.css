@@ -229,17 +229,11 @@ body {
 	}
 
 	.homepage {
-		padding: 20px 0;
+		padding: 20px 20px;
 	}
 
 	.post-list {
 		padding: 0 20px;
-	}
-
-	.post-item:hover {
-		margin: 0 -20px;
-		padding-left: 20px;
-		padding-right: 20px;
 	}
 
 	.single-post {
