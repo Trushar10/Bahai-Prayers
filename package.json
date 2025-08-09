@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@contentful/rich-text-react-renderer": "^16.1.0",
+    "@vercel/speed-insights": "^1.2.0",
     "contentful": "^11.7.15",
     "next": "15.4.6",
     "next-pwa": "^5.6.0",
