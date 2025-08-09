@@ -1,13 +1,12 @@
-// pages/[slug].tsx
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { Entry, EntrySkeletonType, EntryFieldTypes } from 'contentful';
+import { Entry, EntrySkeletonType, EntryFieldTypes, EntrySys } from 'contentful';
 import { client } from '../lib/contentful';
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Document } from '@contentful/rich-text-types';
 import ThemeToggle from '../components/ThemeToggle';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text;
@@ -17,11 +16,20 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>;
 
-// Fetch paths for all prayers
+type CachedPrayer = {
+  fields: {
+    title: string;
+    slug: string;
+    body: string | Document | Record<string, unknown>;
+  };
+  sys: EntrySys;
+  metadata?: Record<string, unknown>;
+};
+
 export const getStaticPaths: GetStaticPaths = async () => {
   const res = await client.getEntries<PrayerSkeleton>({
     content_type: 'prayer-eng',
-    select: ['fields.slug'], // ✅ FIX: array instead of string
+    select: ['fields.slug'],
   });
 
   const paths = res.items.map((item) => ({
@@ -34,7 +42,6 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-// Fetch data for a single prayer
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const res = await client.getEntries<PrayerSkeleton>({
     content_type: 'prayer-eng',
@@ -45,41 +52,73 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     return { notFound: true };
   }
 
-  // Fetch all slugs for pre-caching later
-  const allPrayers = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer-eng',
-    select: ['fields.slug'],
-  });
-
   return {
     props: {
       prayer: res.items[0] as PrayerEntry,
-      allSlugs: allPrayers.items.map((p) => p.fields.slug),
     },
     revalidate: 60,
   };
 };
 
-export default function PrayerPage({
-  prayer,
-  allSlugs,
-}: {
-  prayer: PrayerEntry;
-  allSlugs: string[];
-}) {
+export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEntry }) {
   const router = useRouter();
+  const [prayer, setPrayer] = useState<PrayerEntry | CachedPrayer | null>(initialPrayer);
+  const [isOffline, setIsOffline] = useState(false);
+  const { slug } = router.query;
 
-  // ✅ Pre-cache all prayer pages for offline use
   useEffect(() => {
-    if ('serviceWorker' in navigator && allSlugs?.length) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.active?.postMessage({
-          type: 'PRECACHE_PAGES',
-          payload: allSlugs.map((slug) => `/${slug}`),
-        });
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    setIsOffline(!navigator.onLine);
+
+    if (!prayer && typeof slug === 'string') {
+      loadPrayerFromCache(slug).then((cachedPrayer) => {
+        if (cachedPrayer) {
+          setPrayer(cachedPrayer);
+        }
       });
     }
-  }, [allSlugs]);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [prayer, slug]);
+
+  if (!prayer) {
+    return (
+      <>
+        <Head>
+          <title>Prayer Not Found</title>
+        </Head>
+        <div className="container">
+          <header className="header">
+            <div className="header-content">
+              <button className="back-btn" onClick={() => router.back()}>
+                ← Back
+              </button>
+              <div className="title">Prayer Not Found</div>
+              <ThemeToggle />
+            </div>
+          </header>
+          <main className="single-post">
+            <div className="post-content">
+              <h1>Prayer Not Available</h1>
+              <p>
+                {isOffline
+                  ? "This prayer is not available offline. Please connect to the internet and try again."
+                  : "The requested prayer could not be found."}
+              </p>
+            </div>
+          </main>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -96,6 +135,18 @@ export default function PrayerPage({
       </Head>
 
       <div className="container show-single-post">
+        {isOffline && (
+          <div style={{
+            backgroundColor: '#f39c12',
+            color: 'white',
+            padding: '8px',
+            textAlign: 'center',
+            fontSize: '14px'
+          }}>
+            📱 Viewing offline content
+          </div>
+        )}
+
         <header className="header">
           <div className="header-content">
             <button className="back-btn" onClick={() => router.back()}>
@@ -125,4 +176,38 @@ export default function PrayerPage({
       </div>
     </>
   );
+}
+
+async function loadPrayerFromCache(slug: string): Promise<CachedPrayer | null> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('PrayersDB', 1);
+
+    request.onerror = () => resolve(null);
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(['prayers'], 'readonly');
+      const store = transaction.objectStore('prayers');
+      const getRequest = store.get(slug);
+
+      getRequest.onsuccess = () => {
+        const result = getRequest.result;
+        if (result) {
+          resolve({
+            fields: {
+              title: result.title,
+              slug: result.slug,
+              body: result.body,
+            },
+            sys: result.sys,
+            metadata: result.metadata,
+          });
+        } else {
+          resolve(null);
+        }
+      };
+
+      getRequest.onerror = () => resolve(null);
+    };
+  });
 }
