@@ -46,14 +46,13 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
         <meta name="theme-color" content="#317EFB" />
       </Head>
 
-      <header className="header">
+      <div className="container">
+        <header className="header">
         <div className="header-content">
           <div className="title">Prayers</div>          
           <ThemeToggle />
         </div>
       </header>
-
-      <div className="container">
         <main className="homepage">
           <div className="post-list">
             {prayers.map((p) => (

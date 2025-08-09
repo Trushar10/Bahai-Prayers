@@ -1,5 +1,5 @@
 :root[data-theme='light'] {
-	--bg: #ffffff;
+	--bg: #f9fafe;
 	--text: #212529;
 	--header-bg: #ffffff;
 	--header-border: #e9ecef;
@@ -9,6 +9,7 @@
 	--post-subtext: #374151;
 	--author-text: #6b7280;
 	--author-border: #e5e7eb;
+	--container-shadow: #e2e8f0;
 }
 
 :root[data-theme='dark'] {
@@ -22,6 +23,7 @@
 	--post-subtext: #d1d5db;
 	--author-text: #9ca3af;
 	--author-border: #444;
+	--container-shadow: #334155;
 }
 
 * {
@@ -105,6 +107,8 @@ body {
 	margin: 0 auto;
 	min-height: calc(100vh - 57px);
 	background-color: var(--bg);
+	box-shadow: 0px 0px 7px 0px var(--container-shadow);
+	border-radius: 0px 10px 10px;
 }
 
 /* Homepage */
@@ -210,6 +214,11 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 480px) {
+	.container {
+		box-shadow: none;
+		border-radius: unset;
+	}
+
 	.header-content {
 		padding: 16px 20px;
 	}
