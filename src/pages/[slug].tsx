@@ -21,7 +21,7 @@ type PrayerEntry = Entry<PrayerSkeleton>
 // Fetch paths for all prayers
 export const getStaticPaths: GetStaticPaths = async () => {
   const res = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer',
+    content_type: 'prayer-eng',
   })
 
   const paths = res.items.map((item) => ({
@@ -37,7 +37,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 // Fetch data for a single prayer
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const res = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer',
+    content_type: 'prayer-eng',
     'fields.slug': params?.slug as string,
   })
 
@@ -65,8 +65,9 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/profile-circle.webp" />
       </Head>
-
-      <header className="header">
+    
+      <div className="container show-single-post">
+        <header className="header">
         <div className="header-content">
           <button className="back-btn" onClick={() => router.back()}>
             ← Back
@@ -75,8 +76,6 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
           <ThemeToggle />
         </div>
       </header>
-
-      <div className="container show-single-post">
         <main className="single-post">
           <article className="post-content">
             <h1>{typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}</h1>

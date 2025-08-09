@@ -5,7 +5,6 @@ import { client } from '../lib/contentful'
 import { useRouter } from 'next/router'
 import ThemeToggle from '../components/ThemeToggle'
 
-
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
@@ -14,10 +13,14 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>
 
+interface GroupedPrayers {
+  [tagName: string]: PrayerEntry[]
+}
+
 export const getStaticProps: GetStaticProps = async () => {
   const res = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer',
-    order: ['sys.createdAt'] // oldest first
+    content_type: 'prayer-eng',
+    include: 1 // Include linked entries (tags)
   })
 
   return {
@@ -28,13 +31,51 @@ export const getStaticProps: GetStaticProps = async () => {
   }
 }
 
-
 export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
   const router = useRouter()
 
   const handleClick = (slug: string) => {
     router.push(`/${slug}`)
   }
+
+  // Group prayers by tags and sort alphabetically
+  const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
+    // Get tags from metadata or use a default tag
+    const tags = prayer.metadata?.tags || []
+    
+    if (tags.length === 0) {
+      // If no tags, put in "Other" category
+      if (!acc['Other']) acc['Other'] = []
+      acc['Other'].push(prayer)
+    } else {
+      tags.forEach((tag) => {
+        const tagName = tag.sys?.id || 'Other'
+        
+        // Map tag IDs to display names
+        let displayName = tagName
+        if (tagName === 'theObligatoryPrayers') displayName = 'The Obligatory Prayers'
+        if (tagName === 'generalPrayers') displayName = 'General Prayers'
+        
+        if (!acc[displayName]) acc[displayName] = []
+        acc[displayName].push(prayer)
+      })
+    }
+    
+    return acc
+  }, {} as GroupedPrayers)
+
+  // Sort prayers within each group alphabetically by title
+  Object.keys(groupedPrayers).forEach(tag => {
+    groupedPrayers[tag].sort((a, b) => {
+      const titleA = typeof a.fields.title === 'string' ? a.fields.title : 'Untitled'
+      const titleB = typeof b.fields.title === 'string' ? b.fields.title : 'Untitled'
+      return titleA.localeCompare(titleB)
+    })
+  })
+
+  // Define the order of sections
+  const sectionOrder = ['The Obligatory Prayers', 'General Prayers', 'Other']
+  const orderedSections = sectionOrder.filter(section => groupedPrayers[section]?.length > 0)
 
   return (
     <>
@@ -48,35 +89,42 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
 
       <div className="container">
         <header className="header">
-        <div className="header-content">
-          <div className="title">Prayers</div>          
-          <ThemeToggle />
-        </div>
-      </header>
-        <main className="homepage">
-          <div className="post-list">
-            {prayers.map((p) => (
-              <div
-                key={p.sys.id}
-                className="post-item"
-                onClick={() => {
-                  if (typeof p.fields.slug === 'string') {
-                    handleClick(p.fields.slug)
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') if (typeof p.fields.slug === 'string') {
-                    handleClick(p.fields.slug)
-                  }
-                }}
-              >
-               <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
-
-              </div>
-            ))}
+          <div className="header-content">
+            <div className="title">Prayers</div>          
+            <ThemeToggle />
           </div>
+        </header>
+        
+        <main className="homepage">
+          {orderedSections.map((sectionName) => (
+            <section key={sectionName} className="prayer-section">
+              <h2 className="section-title">{sectionName}</h2>
+              <div className="post-list">
+                {groupedPrayers[sectionName].map((p) => (
+                  <div
+                    key={p.sys.id}
+                    className="post-item"
+                    onClick={() => {
+                      if (typeof p.fields.slug === 'string') {
+                        handleClick(p.fields.slug)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (typeof p.fields.slug === 'string') {
+                          handleClick(p.fields.slug)
+                        }
+                      }
+                    }}
+                  >
+                    <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </main>
       </div>
     </>

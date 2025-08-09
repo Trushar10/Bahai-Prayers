@@ -106,17 +106,17 @@ body {
 /* Container */
 .container {
 	max-width: 480px;
-	margin: 0 auto;
+	margin: 0 auto 5rem;
 	min-height: calc(100vh - 57px);
 	background-color: var(--container-bg);
-	box-shadow: 0px 0px 7px 0px var(--container-shadow);
+	border: 1px solid var(--container-shadow);
 	border-radius: 0px 10px 10px;
 }
 
 /* Homepage */
 .homepage {
 	display: block;
-	padding: 24px 0;
+	padding: 24px 24px;
 }
 
 .post-list {
@@ -125,7 +125,7 @@ body {
 
 .post-item {
 	display: block;
-	padding: 18px 0;
+	padding: 18px 18px;
 	border-bottom: 1px solid var(--post-border);
 	text-decoration: none;
 	color: var(--text);
@@ -135,9 +135,6 @@ body {
 
 .post-item:hover {
 	background-color: var(--hover-bg);
-	margin: 0 -24px;
-	padding-left: 24px;
-	padding-right: 24px;
 }
 
 .post-item:last-child {
@@ -214,9 +211,14 @@ body {
 	color: var(--text); /* Icons adapt to theme color */
 }
 
+.prayer-section {
+	margin-bottom: 1rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
 	.container {
+		margin: 0 auto;
 		box-shadow: none;
 		border-radius: unset;
 		min-height: calc(100vh - 0px);
