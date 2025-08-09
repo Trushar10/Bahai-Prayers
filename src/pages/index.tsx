@@ -16,7 +16,7 @@ type PrayerEntry = Entry<PrayerSkeleton>
 
 // 2. Static Props
 export const getStaticProps: GetStaticProps = async () => {
-  const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
+  const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer-eng' })
 
   return {
     props: {
