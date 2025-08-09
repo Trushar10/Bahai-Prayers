@@ -10,6 +10,7 @@
 	--author-text: #6b7280;
 	--author-border: #e5e7eb;
 	--container-shadow: #e2e8f0;
+	--container-bg: #ffffff;
 }
 
 :root[data-theme='dark'] {
@@ -24,6 +25,7 @@
 	--author-text: #9ca3af;
 	--author-border: #444;
 	--container-shadow: #334155;
+	--container-bg: #1e293b;
 }
 
 * {
@@ -106,7 +108,7 @@ body {
 	max-width: 480px;
 	margin: 0 auto;
 	min-height: calc(100vh - 57px);
-	background-color: var(--bg);
+	background-color: var(--container-bg);
 	box-shadow: 0px 0px 7px 0px var(--container-shadow);
 	border-radius: 0px 10px 10px;
 }
@@ -217,6 +219,7 @@ body {
 	.container {
 		box-shadow: none;
 		border-radius: unset;
+		min-height: calc(100vh - 0px);
 	}
 
 	.header-content {
