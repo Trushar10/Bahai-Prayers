@@ -39,7 +39,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
     router.push(`/${slug}`)
   }
 
-  // ✅ Pre-cache all post pages on first visit
+  // Pre-cache all posts on first visit
   useEffect(() => {
     if ('serviceWorker' in navigator && window.caches) {
       const slugs = prayers
@@ -55,7 +55,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
     }
   }, [prayers])
 
-  // ✅ Group prayers by tags
+  // Group prayers by tags
   const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
     const tags = prayer.metadata?.tags || []
 
@@ -77,7 +77,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
     return acc
   }, {} as GroupedPrayers)
 
-  // ✅ Sort prayers alphabetically within each group
+  // Sort prayers alphabetically in each group
   Object.keys(groupedPrayers).forEach((tag) => {
     groupedPrayers[tag].sort((a, b) => {
       const titleA = typeof a.fields.title === 'string' ? a.fields.title : 'Untitled'
@@ -86,7 +86,7 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
     })
   })
 
-  // ✅ Define section order
+  // Order of sections
   const sectionOrder = ['The Obligatory Prayers', 'General Prayers', 'Other']
   const orderedSections = sectionOrder.filter((section) => groupedPrayers[section]?.length > 0)
 
