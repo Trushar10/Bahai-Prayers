@@ -1,10 +1,11 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { GetStaticProps } from 'next'
+import { useEffect } from 'react'
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { client } from '../lib/contentful'
-import { useRouter } from 'next/router'
-import ThemeToggle from '../components/ThemeToggle'
 
+// 1. Define Contentful Schema
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
@@ -13,15 +14,9 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>
 
-interface GroupedPrayers {
-  [tagName: string]: PrayerEntry[]
-}
-
+// 2. Static Props
 export const getStaticProps: GetStaticProps = async () => {
-  const res = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer-eng',
-    include: 1 // Include linked entries (tags)
-  })
+  const res = await client.getEntries<PrayerSkeleton>({ content_type: 'prayer' })
 
   return {
     props: {
@@ -31,51 +26,20 @@ export const getStaticProps: GetStaticProps = async () => {
   }
 }
 
+// 3. Home Page Component
 export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
-  const router = useRouter()
-
-  const handleClick = (slug: string) => {
-    router.push(`/${slug}`)
-  }
-
-  // Group prayers by tags and sort alphabetically
-  const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
-    // Get tags from metadata or use a default tag
-    const tags = prayer.metadata?.tags || []
-    
-    if (tags.length === 0) {
-      // If no tags, put in "Other" category
-      if (!acc['Other']) acc['Other'] = []
-      acc['Other'].push(prayer)
-    } else {
-      tags.forEach((tag) => {
-        const tagName = tag.sys?.id || 'Other'
-        
-        // Map tag IDs to display names
-        let displayName = tagName
-        if (tagName === 'theObligatoryPrayers') displayName = 'The Obligatory Prayers'
-        if (tagName === 'generalPrayers') displayName = 'General Prayers'
-        
-        if (!acc[displayName]) acc[displayName] = []
-        acc[displayName].push(prayer)
+  // Pre-cache all post pages on first load
+  useEffect(() => {
+    if ('serviceWorker' in navigator && window.caches) {
+      const slugs = prayers.map((p) => `/${p.fields.slug}`)
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.active?.postMessage({
+          type: 'PRECACHE_PAGES',
+          payload: slugs,
+        })
       })
     }
-    
-    return acc
-  }, {} as GroupedPrayers)
-
-  // Sort prayers within each group alphabetically by title
-  Object.keys(groupedPrayers).forEach(tag => {
-    groupedPrayers[tag].sort((a, b) => {
-      const titleA = typeof a.fields.title === 'string' ? a.fields.title : 'Untitled'
-      const titleB = typeof b.fields.title === 'string' ? b.fields.title : 'Untitled'
-      return titleA.localeCompare(titleB)
-    })
-  })
-
-  // Define the order of sections
-  const sectionOrder = ['The Obligatory Prayers', 'General Prayers', 'Other']
-  const orderedSections = sectionOrder.filter(section => groupedPrayers[section]?.length > 0)
+  }, [prayers])
 
   return (
     <>
@@ -87,46 +51,26 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
         <meta name="theme-color" content="#317EFB" />
       </Head>
 
-      <div className="container">
-        <header className="header">
-          <div className="header-content">
-            <div className="title">Prayers</div>          
-            <ThemeToggle />
-          </div>
+      <main className="min-h-screen flex flex-col items-center px-4 pt-20 text-white">
+        <header className="mb-10">
+          <Link href="/">
+            <h1 className="text-3xl font-bold text-center">Prayers</h1>
+          </Link>
         </header>
-        
-        <main className="homepage">
-          {orderedSections.map((sectionName) => (
-            <section key={sectionName} className="prayer-section">
-              <h2 className="section-title">{sectionName}</h2>
-              <div className="post-list">
-                {groupedPrayers[sectionName].map((p) => (
-                  <div
-                    key={p.sys.id}
-                    className="post-item"
-                    onClick={() => {
-                      if (typeof p.fields.slug === 'string') {
-                        handleClick(p.fields.slug)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        if (typeof p.fields.slug === 'string') {
-                          handleClick(p.fields.slug)
-                        }
-                      }
-                    }}
-                  >
-                    <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
-                  </div>
-                ))}
-              </div>
-            </section>
+
+        <ul className="space-y-4 w-full max-w-xl">
+          {prayers.map((p) => (
+            <li key={p.sys.id} className="text-center">
+              <Link
+                href={`/${p.fields.slug}`}
+                className="text-blue-400 hover:underline text-lg"
+              >
+                {typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}
+              </Link>
+            </li>
           ))}
-        </main>
-      </div>
+        </ul>
+      </main>
     </>
   )
 }
