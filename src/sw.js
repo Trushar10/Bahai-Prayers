@@ -8,8 +8,8 @@ import {
 } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
-// Inject Next.js build assets into the cache
-precacheAndRoute(self.__WB_MANIFEST || []);
+// ✅ This must stay exactly like this for next-pwa injectManifest
+precacheAndRoute(self.__WB_MANIFEST);
 
 // HTML pages (offline-first)
 registerRoute(
@@ -103,7 +103,6 @@ self.addEventListener('message', (event) => {
 async function precachePages(pages) {
 	const cache = await caches.open('pages-cache');
 	const BATCH_SIZE = 5;
-
 	for (let i = 0; i < pages.length; i += BATCH_SIZE) {
 		const batch = pages.slice(i, i + BATCH_SIZE);
 		await Promise.allSettled(
@@ -133,7 +132,6 @@ async function precachePages(pages) {
 async function precacheApiData(apiUrls) {
 	const cache = await caches.open('next-api-cache');
 	const BATCH_SIZE = 5;
-
 	for (let i = 0; i < apiUrls.length; i += BATCH_SIZE) {
 		const batch = apiUrls.slice(i, i + BATCH_SIZE);
 		await Promise.allSettled(
