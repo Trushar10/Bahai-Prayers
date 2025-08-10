@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { GetStaticProps } from 'next'
 import { useRouter } from 'next/router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Entry, EntryFieldTypes, EntrySkeletonType, EntrySys } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
 import { client } from '../lib/contentful'
@@ -41,75 +41,89 @@ export const getStaticProps: GetStaticProps = async () => {
   }
 }
 
-export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
+export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry[] }) {
   const router = useRouter()
+  const [prayers, setPrayers] = useState<PrayerEntry[]>(initialPrayers)
 
   const handleClick = (slug: string) => {
     router.push(`/${slug}`)
   }
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator && window.caches && prayers?.length) {
-      const cacheData = async () => {
-        try {
-          const prayersData: Record<string, PrayerCacheEntry> = prayers.reduce((acc, prayer) => {
-            if (typeof prayer.fields.slug === 'string') {
-              acc[prayer.fields.slug] = {
-                title: typeof prayer.fields.title === 'string'
-                  ? prayer.fields.title
-                  : 'Untitled',
-                body: prayer.fields.body,
-                slug: prayer.fields.slug,
-                sys: prayer.sys,
-                metadata: prayer.metadata
-              };
-            }
-            return acc;
-          }, {} as Record<string, PrayerCacheEntry>);
-
-          await storePrayersOffline(prayersData)
-
-          navigator.serviceWorker.ready.then((registration) => {
-            const slugs = prayers
-              .map((p) => (typeof p.fields.slug === 'string' ? `/${p.fields.slug}` : null))
-              .filter((slug): slug is string => !!slug)
-
-            registration.active?.postMessage({
-              type: 'PRECACHE_PAGES',
-              payload: slugs,
-            })
-
-            registration.active?.postMessage({
-              type: 'CACHE_PRAYERS_DATA',
-              payload: prayersData,
-            })
-          })
-
-          console.log(`✅ Cached ${prayers.length} prayers for offline use`)
-        } catch (error) {
-          console.error('❌ Failed to cache prayers:', error)
-        }
+  async function cachePrayers(prayersToCache: PrayerEntry[]) {
+    const prayersData: Record<string, PrayerCacheEntry> = prayersToCache.reduce((acc, prayer) => {
+      if (typeof prayer.fields.slug === 'string') {
+        acc[prayer.fields.slug] = {
+          title: typeof prayer.fields.title === 'string'
+            ? prayer.fields.title
+            : 'Untitled',
+          body: prayer.fields.body,
+          slug: prayer.fields.slug,
+          sys: prayer.sys,
+          metadata: prayer.metadata
+        };
       }
+      return acc;
+    }, {} as Record<string, PrayerCacheEntry>);
 
-      const timeoutId = setTimeout(cacheData, 100)
-      return () => clearTimeout(timeoutId)
+    await storePrayersOffline(prayersData);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        const slugs = prayersToCache
+          .map((p) => (typeof p.fields.slug === 'string' ? `/${p.fields.slug}` : null))
+          .filter((slug): slug is string => !!slug);
+
+        // Precache HTML pages
+        registration.active?.postMessage({
+          type: 'PRECACHE_PAGES',
+          payload: slugs,
+        });
+
+        // Precache API data
+        const apiUrls = slugs.map((slug) => `/api/prayer${slug}`);
+        registration.active?.postMessage({
+          type: 'PRECACHE_API',
+          payload: apiUrls,
+        });
+
+        // Cache structured prayers data
+        registration.active?.postMessage({
+          type: 'CACHE_PRAYERS_DATA',
+          payload: prayersData,
+        });
+      });
     }
-  }, [prayers])
+  }
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const res = await fetch('/api/prayers');
+        if (res.ok) {
+          const latest: PrayerEntry[] = await res.json();
+          setPrayers(latest);
+          await cachePrayers(latest);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch latest prayers:', err);
+      }
+    };
+
+    cachePrayers(initialPrayers); // Cache initial build data
+    fetchLatest(); // Try to refresh from Contentful
+  }, []);
 
   const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
     const tags = prayer.metadata?.tags || []
-
     if (tags.length === 0) {
       if (!acc['Other']) acc['Other'] = []
       acc['Other'].push(prayer)
     } else {
       tags.forEach((tag) => {
         const tagName = tag.sys?.id || 'Other'
-
         let displayName = tagName
         if (tagName === 'theObligatoryPrayers') displayName = 'The Obligatory Prayers'
         if (tagName === 'generalPrayers') displayName = 'General Prayers'
-
         if (!acc[displayName]) acc[displayName] = []
         acc[displayName].push(prayer)
       })
@@ -183,24 +197,18 @@ export default function Home({ prayers }: { prayers: PrayerEntry[] }) {
 async function storePrayersOffline(prayersData: Record<string, PrayerCacheEntry>) {
   return new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('PrayersDB', 1)
-
     request.onerror = () => reject(request.error)
-
     request.onsuccess = () => {
       const db = request.result
       const transaction = db.transaction(['prayers'], 'readwrite')
       const store = transaction.objectStore('prayers')
-
       store.clear()
-
       Object.entries(prayersData).forEach(([slug, prayerData]) => {
         store.put({ ...prayerData, id: slug })
       })
-
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(transaction.error)
     }
-
     request.onupgradeneeded = () => {
       const db = request.result
       if (!db.objectStoreNames.contains('prayers')) {

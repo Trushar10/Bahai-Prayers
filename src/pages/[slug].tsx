@@ -74,30 +74,43 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
     window.addEventListener('offline', handleOffline);
     setIsOffline(!navigator.onLine);
 
-    // Load from IndexedDB if no data
-    if (!prayer && typeof slug === 'string') {
-      loadPrayerFromCache(slug).then((cachedPrayer) => {
-        if (cachedPrayer) {
-          setPrayer(cachedPrayer);
+    async function loadData() {
+      if (typeof slug !== 'string') return;
+
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(`/api/prayer/${slug}`);
+          if (res.ok) {
+            const latest = await res.json();
+            setPrayer(latest);
+            return;
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to fetch from API online:', err);
         }
-      });
+      }
+
+      // Try IndexedDB
+      const fromIDB = await loadPrayerFromCache(slug);
+      if (fromIDB) {
+        setPrayer(fromIDB);
+        return;
+      }
+
+      // Try SW API cache
+      const fromApiCache = await loadPrayerFromApiCache(slug);
+      if (fromApiCache) {
+        setPrayer(fromApiCache);
+      }
     }
 
-    // Fetch latest from API for freshness
-    if (typeof slug === 'string') {
-      fetch(`/api/prayer/${slug}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(latest => {
-          if (latest) setPrayer(latest);
-        })
-        .catch(console.error);
-    }
+    loadData();
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [prayer, slug]);
+  }, [slug]);
 
   if (!prayer) {
     return (
@@ -191,17 +204,14 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
 async function loadPrayerFromCache(slug: string): Promise<CachedPrayer | null> {
   return new Promise((resolve) => {
     const request = indexedDB.open('PrayersDB', 1);
-
     request.onerror = () => resolve(null);
-
     request.onsuccess = () => {
       const db = request.result;
-      const transaction = db.transaction(['prayers'], 'readonly');
-      const store = transaction.objectStore('prayers');
-      const getRequest = store.get(slug);
-
-      getRequest.onsuccess = () => {
-        const result = getRequest.result;
+      const tx = db.transaction(['prayers'], 'readonly');
+      const store = tx.objectStore('prayers');
+      const getReq = store.get(slug);
+      getReq.onsuccess = () => {
+        const result = getReq.result;
         if (result) {
           resolve({
             fields: {
@@ -216,8 +226,20 @@ async function loadPrayerFromCache(slug: string): Promise<CachedPrayer | null> {
           resolve(null);
         }
       };
-
-      getRequest.onerror = () => resolve(null);
+      getReq.onerror = () => resolve(null);
     };
   });
+}
+
+async function loadPrayerFromApiCache(slug: string): Promise<CachedPrayer | null> {
+  try {
+    const cache = await caches.open('next-api-cache');
+    const cachedResponse = await cache.match(`/api/prayer/${slug}`);
+    if (!cachedResponse) return null;
+    const json = await cachedResponse.json();
+    return json;
+  } catch (err) {
+    console.warn('⚠️ Failed to load from API cache:', err);
+    return null;
+  }
 }
