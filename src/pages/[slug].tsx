@@ -72,15 +72,25 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     setIsOffline(!navigator.onLine);
 
+    // Load from IndexedDB if no data
     if (!prayer && typeof slug === 'string') {
       loadPrayerFromCache(slug).then((cachedPrayer) => {
         if (cachedPrayer) {
           setPrayer(cachedPrayer);
         }
       });
+    }
+
+    // Fetch latest from API for freshness
+    if (typeof slug === 'string') {
+      fetch(`/api/prayer/${slug}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(latest => {
+          if (latest) setPrayer(latest);
+        })
+        .catch(console.error);
     }
 
     return () => {
