@@ -40,7 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           hasSpaceId: !!spaceId,
           hasMgmtToken: !!mgmtToken,
           tagCount: tagIds.length,
-          tagIds: tagIds.slice(0, 3), // Show first 3 tag IDs for debugging
         });
         
         if (!spaceId || !mgmtToken) {
@@ -48,7 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw new Error('Management API credentials missing');
         }
 
-        console.log('Fetching tags from Contentful Management API');
         const tagRes = await fetch(`https://api.contentful.com/spaces/${spaceId}/tags`, {
           headers: {
             'Authorization': `Bearer ${mgmtToken}`,
@@ -58,13 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         if (!tagRes.ok) {
           console.error(`Management API error: ${tagRes.status} ${tagRes.statusText}`);
-          const errorText = await tagRes.text();
-          console.error('Error response:', errorText);
           throw new Error(`Management API returned ${tagRes.status}: ${tagRes.statusText}`);
         }
         
         const tagData = await tagRes.json();
-        console.log('Management API response received, items count:', tagData.items?.length || 0);
         
         if (Array.isArray(tagData.items)) {
           tags = (tagData.items as Array<unknown>)
@@ -73,18 +68,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               const t = tag as { sys: { id: string }, name?: string };
               return { sys: { id: t.sys.id }, name: String(t.name) };
             });
-          console.log('Successfully filtered tags:', tags.length);
         }
       } catch (managementApiError) {
-        console.error('Management API failed:', managementApiError);
+        console.error('Management API failed, using fallback:', managementApiError);
         
         // Fallback: Create readable tag names from tag IDs
-        console.log('Using fallback tag name generation for:', tagIds);
         tags = tagIds.map(tagId => ({
           sys: { id: tagId },
           name: generateReadableTagName(tagId)
         }));
-        console.log('Generated fallback tags:', tags);
       }
     }
 

@@ -109,10 +109,8 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   // Fetch prayers and tag names together
   useEffect(() => {
     async function fetchPrayersAndTags() {
-      console.log('Fetching prayers and tags for language:', selectedLang)
       const res = await fetch(`/api/prayers?lang=${selectedLang}`)
       const data = await res.json()
-      console.log('API response:', data)
       
       // Set prayers
       setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
@@ -123,27 +121,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
         data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
           mapping[tag.sys.id] = tag.name || tag.sys.id
         })
-        console.log('Tag name mapping built:', mapping)
-      } else {
-        console.warn('No tags found in API response or invalid format')
       }
-      
-      // Log tag IDs used in prayers for debugging
-      const prayerTagIds = (Array.isArray(data.items) ? data.items : (data.items ?? [])).flatMap((prayer: unknown) => {
-        if (typeof prayer === 'object' && prayer && 'metadata' in prayer) {
-          const tags = (prayer as { metadata?: { tags?: unknown[] } }).metadata?.tags || [];
-          return tags.map((tag: unknown) => {
-            if (typeof tag === 'object' && tag && 'sys' in tag) {
-              return (tag as { sys?: { id?: string } }).sys?.id;
-            }
-            return undefined;
-          });
-        }
-        return [];
-      }).filter(Boolean)
-      
-      console.log('Prayer tag IDs found:', [...new Set(prayerTagIds)])
-      console.log('Tags available in mapping:', Object.keys(mapping))
       
       setTagNames(mapping)
     }
@@ -274,8 +252,6 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
           // Fallback tag name generation if mapping failed
           displayName = generateFallbackTagName(tagId)
         }
-        
-        console.log(`Tag mapping: ${tagId} -> ${displayName}`)
         
         if (!acc[displayName]) acc[displayName] = []
         acc[displayName].push(prayer)

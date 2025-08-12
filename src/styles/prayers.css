@@ -116,7 +116,6 @@ body {
 	position: relative;
 	max-width: 480px;
 	margin: 0 auto 5rem;
-	min-height: calc(100vh - 57px);
 	background-color: var(--container-bg);
 	border: 1px solid var(--container-shadow);
 	border-radius: 0px 10px 10px;
