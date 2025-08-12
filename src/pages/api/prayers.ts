@@ -28,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ).filter(Boolean)
     ));
 
+    console.log('All tag IDs found in prayers:', tagIds);
+
     let tags: { sys: { id: string }, name?: string }[] = [];
     
     // Try to get tag names from Management API first, with fallback
@@ -68,6 +70,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               const t = tag as { sys: { id: string }, name?: string };
               return { sys: { id: t.sys.id }, name: String(t.name) };
             });
+          console.log('Successfully got tag names from Management API:', tags.length);
+        }
+        
+        // If we didn't get any tags from Management API, fall back
+        if (tags.length === 0) {
+          throw new Error('No tags returned from Management API');
         }
       } catch (managementApiError) {
         console.error('Management API failed, using fallback:', managementApiError);
@@ -77,7 +85,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sys: { id: tagId },
           name: generateReadableTagName(tagId)
         }));
+        console.log('Generated fallback tags:', tags);
       }
+    }
+
+    // Ensure we always have tags if we have tagIds
+    if (tagIds.length > 0 && tags.length === 0) {
+      console.warn('No tags generated, creating emergency fallback');
+      tags = tagIds.map(tagId => ({
+        sys: { id: tagId },
+        name: generateReadableTagName(tagId)
+      }));
     }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
@@ -111,7 +129,7 @@ function generateReadableTagName(tagId: string): string {
     'tablet-prayers': 'Tablet Prayers',
     'short-prayers': 'Short Prayers',
     'long-prayers': 'Long Prayers',
-    // Add common variations
+    // Add common variations and actual IDs from your space
     'obligatory': 'The Obligatory Prayers',
     'general': 'General Prayers',
     'morning': 'Morning Prayers',
@@ -120,11 +138,26 @@ function generateReadableTagName(tagId: string): string {
     'special': 'Special Prayers',
     'healing': 'Healing Prayers',
     'protection': 'Protection Prayers',
+    // These seem to be the actual IDs from your Contentful space
+    'generalPrayers': 'General Prayers',
+    'theObligatoryPrayers': 'The Obligatory Prayers',
+    'obligatoryPrayers': 'The Obligatory Prayers',
+    'specialPrayers': 'Special Prayers',
+    'morningPrayers': 'Morning Prayers',
+    'eveningPrayers': 'Evening Prayers',
+    'healingPrayers': 'Healing Prayers',
+    'protectionPrayers': 'Protection Prayers',
   };
   
+  // Log the mapping for debugging in production
+  console.log(`Generating fallback name for tag ID: "${tagId}"`);
+  
   // Return mapped name or convert ID to title case
-  return tagNameMap[tagId] || tagId
-    .split('-')
+  const fallbackName = tagNameMap[tagId] || tagId
+    .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+    
+  console.log(`Fallback result: "${tagId}" -> "${fallbackName}"`);
+  return fallbackName;
 }

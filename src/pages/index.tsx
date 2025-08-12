@@ -219,6 +219,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       'protection-prayers': 'Protection Prayers',
       'spiritual-development': 'Spiritual Development',
       'devotional-prayers': 'Devotional Prayers',
+      // Common variations and actual IDs from Contentful
       'obligatory': 'The Obligatory Prayers',
       'general': 'General Prayers',
       'morning': 'Morning Prayers',
@@ -227,10 +228,19 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       'special': 'Special Prayers',
       'healing': 'Healing Prayers',
       'protection': 'Protection Prayers',
+      // Actual IDs from your Contentful space
+      'generalPrayers': 'General Prayers',
+      'theObligatoryPrayers': 'The Obligatory Prayers',
+      'obligatoryPrayers': 'The Obligatory Prayers',
+      'specialPrayers': 'Special Prayers',
+      'morningPrayers': 'Morning Prayers',
+      'eveningPrayers': 'Evening Prayers',
+      'healingPrayers': 'Healing Prayers',
+      'protectionPrayers': 'Protection Prayers',
     };
     
     return tagNameMap[tagId] || tagId
-      .split('-')
+      .split(/[-_]/)
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
