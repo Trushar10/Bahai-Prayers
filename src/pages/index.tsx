@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { GetStaticProps } from 'next'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Entry, EntryFieldTypes, EntrySkeletonType, EntrySys } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
@@ -293,34 +293,43 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       .join(' ');
   }
 
-  // Group prayers by tags
-  const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
-    const tags = prayer.metadata?.tags || []
-    if (tags.length === 0) {
-      if (!acc['Other']) acc['Other'] = []
-      acc['Other'].push(prayer)
-    } else {
-      tags.forEach((tag) => {
-        const tagId = tag.sys?.id || 'Other'
-        
-        // Try to get tag name from tagNames mapping, otherwise use fallback
-        let displayName = tagNames[tagId]
-        
-        console.log(`Processing tag: ${tagId}, found in mapping: ${!!displayName}, value: ${displayName}`)
-        console.log('Current tagNames state:', tagNames)
-        
-        if (!displayName || displayName === tagId) {
-          // Fallback tag name generation if mapping failed
-          displayName = generateFallbackTagName(tagId)
-          console.log(`Using fallback for ${tagId}: ${displayName}`)
-        }
-        
-        if (!acc[displayName]) acc[displayName] = []
-        acc[displayName].push(prayer)
-      })
+  // Group prayers by tags - with proper dependency on tagNames being loaded
+  const groupedPrayers: GroupedPrayers = useMemo(() => {
+    // Only group prayers if we have tag names loaded
+    if (Object.keys(tagNames).length === 0) {
+      console.log('Skipping grouping - tagNames not loaded yet');
+      return {};
     }
-    return acc
-  }, {} as GroupedPrayers)
+    
+    console.log('Grouping prayers with tagNames:', tagNames);
+    
+    return filteredPrayers.reduce((acc, prayer) => {
+      const tags = prayer.metadata?.tags || []
+      if (tags.length === 0) {
+        if (!acc['Other']) acc['Other'] = []
+        acc['Other'].push(prayer)
+      } else {
+        tags.forEach((tag) => {
+          const tagId = tag.sys?.id || 'Other'
+          
+          // Try to get tag name from tagNames mapping, otherwise use fallback
+          let displayName = tagNames[tagId]
+          
+          console.log(`Processing tag: ${tagId}, found in mapping: ${!!displayName}, value: ${displayName}`)
+          
+          if (!displayName || displayName === tagId) {
+            // Fallback tag name generation if mapping failed
+            displayName = generateFallbackTagName(tagId)
+            console.log(`Using fallback for ${tagId}: ${displayName}`)
+          }
+          
+          if (!acc[displayName]) acc[displayName] = []
+          acc[displayName].push(prayer)
+        })
+      }
+      return acc
+    }, {} as GroupedPrayers)
+  }, [filteredPrayers, tagNames]) // Re-run when tagNames changes
 
   // Handle browser back/forward navigation
   useEffect(() => {
