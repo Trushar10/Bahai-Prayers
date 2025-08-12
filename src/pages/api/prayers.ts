@@ -29,64 +29,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ));
 
     console.log('All tag IDs found in prayers:', tagIds);
-    console.log('Processing prayers API request for production debugging');
 
     let tags: { sys: { id: string }, name?: string }[] = [];
     
-    // Try to get tag names from Management API first, with fallback
+    // Try to get localized tag names from a tag-metadata content type
     if (tagIds.length > 0) {
       try {
-        const spaceId = process.env.CONTENTFUL_SPACE_ID;
-        const mgmtToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
-        
-        console.log('Environment check:', {
-          hasSpaceId: !!spaceId,
-          hasMgmtToken: !!mgmtToken,
-          tagCount: tagIds.length,
+        // First, try to fetch tag metadata from Contentful in the current language
+        const tagMetadataEntries = await client.getEntries({
+          content_type: 'tag-metadata',
+          locale: langCode === 'en' ? 'en-US' : langCode,
+          'fields.tagId[in]': tagIds.join(',')
         });
-        
-        if (!spaceId || !mgmtToken) {
-          console.warn('Management API credentials not available, using fallback tag names');
-          throw new Error('Management API credentials missing');
-        }
 
-        const tagRes = await fetch(`https://api.contentful.com/spaces/${spaceId}/tags`, {
-          headers: {
-            'Authorization': `Bearer ${mgmtToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!tagRes.ok) {
-          console.error(`Management API error: ${tagRes.status} ${tagRes.statusText}`);
-          throw new Error(`Management API returned ${tagRes.status}: ${tagRes.statusText}`);
+        if (tagMetadataEntries.items.length > 0) {
+          tags = tagMetadataEntries.items.map(entry => ({
+            sys: { id: entry.fields.tagId as string },
+            name: entry.fields.displayName as string
+          }));
+          console.log(`Found ${tags.length} localized tag names from tag-metadata content type`);
+        } else {
+          throw new Error('No tag metadata found in Contentful');
         }
+      } catch (tagMetadataError) {
+        console.log('Tag metadata approach failed, trying Management API:', tagMetadataError);
         
-        const tagData = await tagRes.json();
-        
-        if (Array.isArray(tagData.items)) {
-          tags = (tagData.items as Array<unknown>)
-            .filter(tag => tagIds.includes((tag as { sys: { id: string } }).sys.id))
-            .map(tag => {
-              const t = tag as { sys: { id: string }, name?: string };
-              return { sys: { id: t.sys.id }, name: String(t.name) };
-            });
-          console.log('Successfully got tag names from Management API:', tags.length);
+        // Fallback to Management API approach
+        try {
+          const spaceId = process.env.CONTENTFUL_SPACE_ID;
+          const mgmtToken = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
+          
+          if (!spaceId || !mgmtToken) {
+            throw new Error('Management API credentials missing');
+          }
+
+          const tagRes = await fetch(`https://api.contentful.com/spaces/${spaceId}/tags`, {
+            headers: {
+              'Authorization': `Bearer ${mgmtToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!tagRes.ok) {
+            throw new Error(`Management API returned ${tagRes.status}: ${tagRes.statusText}`);
+          }
+          
+          const tagData = await tagRes.json();
+          
+          if (Array.isArray(tagData.items)) {
+            tags = (tagData.items as Array<unknown>)
+              .filter(tag => tagIds.includes((tag as { sys: { id: string } }).sys.id))
+              .map(tag => {
+                const t = tag as { sys: { id: string }, name?: string };
+                return { sys: { id: t.sys.id }, name: String(t.name) };
+              });
+            console.log('Got tag names from Management API as fallback:', tags.length);
+          }
+          
+          if (tags.length === 0) {
+            throw new Error('No tags returned from Management API');
+          }
+        } catch (managementApiError) {
+          console.error('Management API failed, using final fallback:', managementApiError);
+          
+          // Final fallback: Generate basic names from tag IDs
+          tags = tagIds.map(tagId => ({
+            sys: { id: tagId },
+            name: generateBasicTagName(tagId)
+          }));
+          console.log('Generated basic fallback tags:', tags);
         }
-        
-        // If we didn't get any tags from Management API, fall back
-        if (tags.length === 0) {
-          throw new Error('No tags returned from Management API');
-        }
-      } catch (managementApiError) {
-        console.error('Management API failed, using fallback:', managementApiError);
-        
-        // Fallback: Create readable tag names from tag IDs
-        tags = tagIds.map(tagId => ({
-          sys: { id: tagId },
-          name: generateReadableTagName(tagId, langCode)
-        }));
-        console.log('Generated fallback tags:', tags);
       }
     }
 
@@ -95,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn('No tags generated, creating emergency fallback');
       tags = tagIds.map(tagId => ({
         sys: { id: tagId },
-        name: generateReadableTagName(tagId, langCode)
+        name: generateBasicTagName(tagId)
       }));
     }
 
@@ -110,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`Adding missing tag mapping for: ${tagId}`);
         finalTags.push({
           sys: { id: tagId },
-          name: generateReadableTagName(tagId, langCode)
+          name: generateBasicTagName(tagId)
         });
       }
     });
@@ -125,127 +137,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// Fallback function to generate readable tag names from IDs with localization support
-function generateReadableTagName(tagId: string, langCode: string = 'en'): string {
-  // Localized tag name mappings
-  const tagMappings: Record<string, Record<string, string>> = {
-    'obligatory-prayers': {
-      'en': 'The Obligatory Prayers',
-      'hi': 'अनिवार्य प्रार्थनाएँ',
-      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
-    },
-    'general-prayers': {
-      'en': 'General Prayers',
-      'hi': 'सामान्य प्रार्थनाएँ',
-      'gu': 'સામાન્ય પ્રાર્થનાઓ'
-    },
-    'morning-prayers': {
-      'en': 'Morning Prayers',
-      'hi': 'प्रातःकालीन प्रार्थनाएँ',
-      'gu': 'સવારની પ્રાર્થનાઓ'
-    },
-    'evening-prayers': {
-      'en': 'Evening Prayers',
-      'hi': 'सायंकालीन प्रार्थनाएँ',
-      'gu': 'સાંજની પ્રાર્થનાઓ'
-    },
-    'daily-prayers': {
-      'en': 'Daily Prayers',
-      'hi': 'दैनिक प्रार्थनाएँ',
-      'gu': 'દૈનિક પ્રાર્થનાઓ'
-    },
-    'special-prayers': {
-      'en': 'Special Prayers',
-      'hi': 'विशेष प्रार्थनाएँ',
-      'gu': 'વિશેષ પ્રાર્થનાઓ'
-    },
-    'healing-prayers': {
-      'en': 'Healing Prayers',
-      'hi': 'आरोग्य प्रार्थनाएँ',
-      'gu': 'આરોગ્ય પ્રાર્થનાઓ'
-    },
-    'protection-prayers': {
-      'en': 'Protection Prayers',
-      'hi': 'सुरक्षा प्रार्थनाएँ',
-      'gu': 'સુરક્ષા પ્રાર્થનાઓ'
-    },
-    'spiritual-development': {
-      'en': 'Spiritual Development',
-      'hi': 'आध्यात्मिक विकास',
-      'gu': 'આધ્યાત્મિક વિકાસ'
-    },
-    'devotional-prayers': {
-      'en': 'Devotional Prayers',
-      'hi': 'भक्ति प्रार्थनाएँ',
-      'gu': 'ભક્તિ પ્રાર્થનાઓ'
-    },
-    'unity-prayers': {
-      'en': 'Unity Prayers',
-      'hi': 'एकता प्रार्थनाएँ',
-      'gu': 'એકતા પ્રાર્થનાઓ'
-    },
-    'guidance-prayers': {
-      'en': 'Guidance Prayers',
-      'hi': 'मार्गदर्शन प्रार्थनाएँ',
-      'gu': 'માર્ગદર્શન પ્રાર્થનાઓ'
-    },
-    'gratitude-prayers': {
-      'en': 'Gratitude Prayers',
-      'hi': 'कृतज्ञता प्रार्थनाएँ',
-      'gu': 'કૃતજ્ઞતા પ્રાર્થનાઓ'
-    },
-    // Camel case variations
-    'generalPrayers': {
-      'en': 'General Prayers',
-      'hi': 'सामान्य प्रार्थनाएँ',
-      'gu': 'સામાન્ય પ્રાર્થનાઓ'
-    },
-    'theObligatoryPrayers': {
-      'en': 'The Obligatory Prayers',
-      'hi': 'अनिवार्य प्रार्थनाएँ',
-      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
-    },
-    'obligatoryPrayers': {
-      'en': 'The Obligatory Prayers',
-      'hi': 'अनिवार्य प्रार्थनाएँ',
-      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
-    },
-    // Single word variations
-    'obligatory': {
-      'en': 'The Obligatory Prayers',
-      'hi': 'अनिवार्य प्रार्थनाएँ',
-      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
-    },
-    'general': {
-      'en': 'General Prayers',
-      'hi': 'सामान्य प्रार्थनाएँ',
-      'gu': 'સામાન્ય પ્રાર્થનાઓ'
-    }
-  };
-  
-  // Log the mapping for debugging in production
-  console.log(`Generating fallback name for tag ID: "${tagId}" in language: "${langCode}"`);
-  
-  // First try to get localized name
-  const localizedName = tagMappings[tagId]?.[langCode];
-  if (localizedName) {
-    console.log(`Found localized name: "${tagId}" -> "${localizedName}"`);
-    return localizedName;
-  }
-
-  // Fallback to English if available
-  const englishName = tagMappings[tagId]?.['en'];
-  if (englishName) {
-    console.log(`Using English fallback: "${tagId}" -> "${englishName}"`);
-    return englishName;
-  }
-
-  // Final fallback to generated name
-  const fallbackName = tagId
+// Simple function to generate basic readable names from tag IDs (no hard-coded localization)
+function generateBasicTagName(tagId: string): string {
+  return tagId
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-    
-  console.log(`Using generated fallback: "${tagId}" -> "${fallbackName}"`);
-  return fallbackName;
 }
