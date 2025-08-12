@@ -99,8 +99,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }));
     }
 
+    // IMPORTANT: Always include mappings for the actual tag IDs found in prayers
+    // even if Management API returned different IDs
+    const finalTags = [...tags];
+    
+    // Add mappings for any tag IDs that we found in prayers but don't have names for
+    tagIds.forEach(tagId => {
+      const existingTag = finalTags.find(tag => tag.sys.id === tagId);
+      if (!existingTag) {
+        console.log(`Adding missing tag mapping for: ${tagId}`);
+        finalTags.push({
+          sys: { id: tagId },
+          name: generateReadableTagName(tagId)
+        });
+      }
+    });
+
+    console.log('Final tags being returned:', finalTags);
+
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
-    res.status(200).json({ items: sortedItems, tags });
+    res.status(200).json({ items: sortedItems, tags: finalTags });
   } catch (error) {
     console.error('API Error:', error);
     res.status(500).json({ error: 'Failed to fetch prayers' });
