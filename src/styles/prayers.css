@@ -120,12 +120,50 @@ body {
 	background-color: var(--container-bg);
 	border: 1px solid var(--container-shadow);
 	border-radius: 0px 10px 10px;
+	overflow: hidden;
+}
+
+/* Page Animation Container */
+.page-container {
+	position: relative;
+	width: 200%;
+	height: 100%;
+	display: flex;
+	transform: translateX(0);
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animation States */
+.page-container.slide-left {
+	transform: translateX(-50%);
+}
+
+/* Individual Page Views */
+.page-view {
+	width: 50%;
+	flex-shrink: 0;
 }
 
 /* Homepage */
 .homepage {
 	display: block;
 	padding: 24px 24px;
+}
+
+.prayer-section {
+	margin-bottom: 32px;
+}
+
+.prayer-section:last-child {
+	margin-bottom: 0;
+}
+
+.section-title {
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--text);
+	margin-bottom: 16px;
+	padding: 0 24px;
 }
 
 .post-list {

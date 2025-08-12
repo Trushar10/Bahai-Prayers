@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { Entry, EntryFieldTypes, EntrySkeletonType, EntrySys } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
+import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import { client } from '../lib/contentful'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
@@ -101,6 +102,9 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   }
   const [selectedLang, setSelectedLang] = useState(getInitialLang())
   const [filteredPrayers, setFilteredPrayers] = useState<Array<PrayerEntry>>(prayers || [])
+  const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
+  const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
+  const [isAnimating, setIsAnimating] = useState(false)
 
   // Fetch tag names from Contentful
   // Fetch prayers and tag names together
@@ -147,9 +151,50 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     }
   }, [selectedLang])
 
+  // Fetch individual prayer content via API
+  const fetchPrayerContent = async (slug: string): Promise<PrayerEntry | null> => {
+    try {
+      const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch prayer')
+      }
+      const data = await res.json()
+      return data.prayer || null
+    } catch (error) {
+      console.error('Error fetching prayer:', error)
+      return null
+    }
+  }
 
+  const handleClick = async (slug: string) => {
+    if (isAnimating) return
+    
+    setIsAnimating(true)
+    const prayer = await fetchPrayerContent(slug)
+    
+    if (prayer) {
+      setSelectedPrayer(prayer)
+      setCurrentView('prayer')
+    }
+    
+    // Small delay to ensure state updates before animation ends
+    setTimeout(() => setIsAnimating(false), 300)
+  }
 
-  const handleClick = (slug: string) => {
+  const handleBack = () => {
+    if (isAnimating) return
+    
+    setIsAnimating(true)
+    setCurrentView('home')
+    
+    // Clear selected prayer after animation
+    setTimeout(() => {
+      setSelectedPrayer(null)
+      setIsAnimating(false)
+    }, 300)
+  }
+
+  const handleClick_old = (slug: string) => {
     router.push(`/${selectedLang}/${slug}`)
   }
 
@@ -213,49 +258,90 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       </Head>
 
       <div className="container">
-        <header className="header">
-          <div className="header-content">
-            <div className="title">Prayers</div>
-            <LanguageToggle
-              languages={languages}
-              currentLang={selectedLang}
-              onChange={setSelectedLang}
-            />           
-          </div>
-        </header>
-
-        <main className="homepage">
-          {orderedSections.map((sectionName) => (
-            <section key={sectionName} className="prayer-section">
-              <h2 className="section-title">{sectionName}</h2>
-              <div className="post-list">
-                {groupedPrayers[sectionName].map((p: PrayerEntry) => (
-                  <div
-                    key={p.sys.id}
-                    className="post-item"
-                    onClick={() => {
-                      if (typeof p.fields.slug === 'string') {
-                        handleClick(p.fields.slug)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && typeof p.fields.slug === 'string') {
-                        handleClick(p.fields.slug)
-                      }
-                    }}
-                  >
-                    <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
-                  </div>
-                ))}
+        <div className={`page-container ${currentView === 'prayer' ? 'slide-left' : ''}`}>
+          {/* Homepage View */}
+          <div className="page-view">
+            <header className="header">
+              <div className="header-content">
+                <div className="title">Prayers</div>
+                <LanguageToggle
+                  languages={languages}
+                  currentLang={selectedLang}
+                  onChange={setSelectedLang}
+                />           
               </div>
-            </section>
-          ))}
-        </main>
-        <footer className="footer">
-          <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
-        </footer>
+            </header>
+
+            <main className="homepage">
+              {orderedSections.map((sectionName) => (
+                <section key={sectionName} className="prayer-section">
+                  <h2 className="section-title">{sectionName}</h2>
+                  <div className="post-list">
+                    {groupedPrayers[sectionName].map((p: PrayerEntry) => (
+                      <div
+                        key={p.sys.id}
+                        className="post-item"
+                        onClick={() => {
+                          if (typeof p.fields.slug === 'string') {
+                            handleClick(p.fields.slug)
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && typeof p.fields.slug === 'string') {
+                            handleClick(p.fields.slug)
+                          }
+                        }}
+                      >
+                        <h3>{typeof p.fields.title === 'string' ? p.fields.title : 'Untitled'}</h3>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </main>
+            <footer className="footer">
+              <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
+            </footer>
+          </div>
+
+          {/* Prayer Detail View */}
+          <div className="page-view">
+            {selectedPrayer && (
+              <>
+                <header className="header">
+                  <div className="header-content">
+                    <button className="back-btn" onClick={handleBack}>
+                      ← Back
+                    </button>
+                    <div className="title">
+                      {typeof selectedPrayer.fields.title === 'string'
+                        ? selectedPrayer.fields.title
+                        : 'Prayer'}
+                    </div>          
+                  </div>
+                </header>
+
+                <main className="single-post" style={{ display: 'block' }}>
+                  <article className="post-content">
+                    <h1>
+                      {typeof selectedPrayer.fields.title === 'string'
+                        ? selectedPrayer.fields.title
+                        : 'Prayer'}
+                    </h1>
+                    <div className="content">
+                      {documentToReactComponents(selectedPrayer.fields.body as Document)}
+                    </div>
+                  </article>
+                </main>
+                <footer className="footer">
+                  <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
+                </footer>
+              </>
+            )}
+          </div>
+        </div>
         <ThemeToggle className="theme-toggle-fixed" />
       </div>
     </>
