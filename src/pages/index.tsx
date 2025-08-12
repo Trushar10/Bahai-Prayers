@@ -228,6 +228,62 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     router.push(`/${selectedLang}/${slug}`)
   }
 
+  // Fallback function to generate readable tag names (same as in API)
+  const generateFallbackTagName = (tagId: string): string => {
+    const tagNameMap: { [key: string]: string } = {
+      'obligatory-prayers': 'The Obligatory Prayers',
+      'general-prayers': 'General Prayers',
+      'morning-prayers': 'Morning Prayers',
+      'evening-prayers': 'Evening Prayers',
+      'daily-prayers': 'Daily Prayers',
+      'special-prayers': 'Special Prayers',
+      'healing-prayers': 'Healing Prayers',
+      'protection-prayers': 'Protection Prayers',
+      'spiritual-development': 'Spiritual Development',
+      'devotional-prayers': 'Devotional Prayers',
+      'obligatory': 'The Obligatory Prayers',
+      'general': 'General Prayers',
+      'morning': 'Morning Prayers',
+      'evening': 'Evening Prayers',
+      'daily': 'Daily Prayers',
+      'special': 'Special Prayers',
+      'healing': 'Healing Prayers',
+      'protection': 'Protection Prayers',
+    };
+    
+    return tagNameMap[tagId] || tagId
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  // Group prayers by tags
+  const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
+    const tags = prayer.metadata?.tags || []
+    if (tags.length === 0) {
+      if (!acc['Other']) acc['Other'] = []
+      acc['Other'].push(prayer)
+    } else {
+      tags.forEach((tag) => {
+        const tagId = tag.sys?.id || 'Other'
+        
+        // Try to get tag name from tagNames mapping, otherwise use fallback
+        let displayName = tagNames[tagId]
+        
+        if (!displayName || displayName === tagId) {
+          // Fallback tag name generation if mapping failed
+          displayName = generateFallbackTagName(tagId)
+        }
+        
+        console.log(`Tag mapping: ${tagId} -> ${displayName}`)
+        
+        if (!acc[displayName]) acc[displayName] = []
+        acc[displayName].push(prayer)
+      })
+    }
+    return acc
+  }, {} as GroupedPrayers)
+
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -259,70 +315,6 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       window.removeEventListener('popstate', handlePopState)
     }
   }, [selectedLang])
-
-  // Group prayers by tags
-  const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
-    const tags = prayer.metadata?.tags || []
-    if (tags.length === 0) {
-      if (!acc['Other']) acc['Other'] = []
-      acc['Other'].push(prayer)
-    } else {
-      tags.forEach((tag) => {
-        const tagId = tag.sys?.id || 'Other'
-        
-        // Try to get tag name from tagNames mapping, otherwise use fallback
-        let displayName = tagNames[tagId]
-        
-        if (!displayName || displayName === tagId) {
-          // Fallback tag name generation if mapping failed
-          displayName = generateFallbackTagName(tagId)
-        }
-        
-        console.log(`Tag mapping: ${tagId} -> ${displayName}`)
-        
-        if (!acc[displayName]) acc[displayName] = []
-        acc[displayName].push(prayer)
-      })
-    }
-    return acc
-  }, {} as GroupedPrayers)
-
-  // Fallback function to generate readable tag names (same as in API)
-  const generateFallbackTagName = (tagId: string): string => {
-    const tagNameMap: { [key: string]: string } = {
-      'obligatory-prayers': 'The Obligatory Prayers',
-      'general-prayers': 'General Prayers',
-      'morning-prayers': 'Morning Prayers',
-      'evening-prayers': 'Evening Prayers',
-      'daily-prayers': 'Daily Prayers',
-      'special-prayers': 'Special Prayers',
-      'healing-prayers': 'Healing Prayers',
-      'protection-prayers': 'Protection Prayers',
-      'spiritual-development': 'Spiritual Development',
-      'devotional-prayers': 'Devotional Prayers',
-      'obligatory': 'The Obligatory Prayers',
-      'general': 'General Prayers',
-      'morning': 'Morning Prayers',
-      'evening': 'Evening Prayers',
-      'daily': 'Daily Prayers',
-      'special': 'Special Prayers',
-      'healing': 'Healing Prayers',
-      'protection': 'Protection Prayers',
-    };
-    
-    return tagNameMap[tagId] || tagId
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  Object.keys(groupedPrayers).forEach((tag) => {
-    groupedPrayers[tag].sort((a, b) => {
-      const titleA = typeof a.fields.title === 'string' ? a.fields.title : 'Untitled'
-      const titleB = typeof b.fields.title === 'string' ? b.fields.title : 'Untitled'
-      return titleA.localeCompare(titleB)
-    })
-  })
 
   // Get all tag names and sort them alphabetically
   // Custom order: The Obligatory Prayers, General Prayers, then others alphabetically, then Other
