@@ -8,6 +8,14 @@ import { Document } from '@contentful/rich-text-types';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useEffect, useState } from 'react';
 
+// Helper function to clean URL slugs (replace spaces with hyphens)
+const cleanUrlSlug = (text: string): string => {
+  return text
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/\-\-+/g, '-'); // Replace multiple hyphens with single hyphen
+}
+
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text;
   slug: EntryFieldTypes.Text;
@@ -38,8 +46,11 @@ export const getStaticPaths: GetStaticPaths = async () => {
         content_type: `prayer-${langCode}`,
         select: ['fields.slug'],
       });
+      
       res.items.forEach((item) => {
-        paths.push({ params: { lang: langCode, slug: item.fields.slug } });
+        // Clean the original slug for URL use
+        const cleanSlug = cleanUrlSlug(item.fields.slug);
+        paths.push({ params: { lang: langCode, slug: cleanSlug } });
       });
     }
   }
@@ -52,20 +63,25 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
   const langCode = params?.lang ? String(params.lang) : 'en';
-  const slug = params?.slug as string;
+  const urlSlug = params?.slug as string;
 
+  // Get all prayers for this language to find the one matching our URL slug
   const res = await client.getEntries<PrayerSkeleton>({
     content_type: `prayer-${langCode}`,
-    'fields.slug': slug,
   });
 
-  if (!res.items.length) {
+  // Find prayer where the cleaned slug matches our URL slug
+  const matchingPrayer = res.items.find(item => {
+    return cleanUrlSlug(item.fields.slug) === urlSlug;
+  });
+
+  if (!matchingPrayer) {
     return { notFound: true };
   }
 
   return {
     props: {
-      prayer: res.items[0] as PrayerEntry,
+      prayer: matchingPrayer as PrayerEntry,
     },
     revalidate: 60,
   };

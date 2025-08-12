@@ -1,23 +1,19 @@
 import Head from 'next/head'
 import { GetStaticProps } from 'next'
-import { useRouter } from 'next/router'
 import { useEffect, useState, useMemo } from 'react'
-import { Entry, EntryFieldTypes, EntrySkeletonType, EntrySys } from 'contentful'
+import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import { client } from '../lib/contentful'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 
-// Helper function to create URL-friendly slugs
-const createUrlSlug = (text: string): string => {
+// Helper function to clean URL slugs (replace spaces with hyphens)
+const cleanUrlSlug = (text: string): string => {
   return text
-    .toLowerCase()
+    .trim()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/[^\w\-]+/g, '') // Remove special characters except hyphens
-    .replace(/\-\-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+/, '') // Remove hyphens from start
-    .replace(/-+$/, ''); // Remove hyphens from end
+    .replace(/\-\-+/g, '-'); // Replace multiple hyphens with single hyphen
 }
 
 type PrayerSkeleton = EntrySkeletonType<{
@@ -43,7 +39,6 @@ interface GroupedPrayers {
 interface Props {
   prayers: PrayerEntry[];
   languages: { code: string; name: string }[];
-  defaultLang: string;
 }
 
 export const getStaticProps: GetStaticProps = async () => {
@@ -97,13 +92,23 @@ export const getStaticProps: GetStaticProps = async () => {
   }
 }
 
-export default function Home({ prayers, languages, defaultLang }: Props) {
-  const router = useRouter()
+export default function Home({ prayers, languages }: Props) {
   // State to hold tag ID to name mapping
   const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
-  // Get language from localStorage or default to English
+  
+  // Get language from URL path or localStorage or default to English
   const getInitialLang = () => {
     if (typeof window !== 'undefined') {
+      // Check if we're on a language-specific path
+      const pathname = window.location.pathname;
+      const pathLang = pathname.split('/')[1]; // Get first segment after /
+      
+      if (pathLang && ['en', 'hi', 'gu'].includes(pathLang)) {
+        localStorage.setItem('selectedLang', pathLang);
+        return pathLang;
+      }
+      
+      // Check localStorage
       const savedLang = localStorage.getItem('selectedLang')
       if (savedLang && languages.some(l => l.code === savedLang)) {
         return savedLang
@@ -112,11 +117,19 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     // Always prefer English first
     return 'en'
   }
+  
   const [selectedLang, setSelectedLang] = useState(getInitialLang())
   const [filteredPrayers, setFilteredPrayers] = useState<Array<PrayerEntry>>(prayers || [])
   const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+
+  // Redirect root path to /en for consistency
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/') {
+      window.history.replaceState(null, '', '/en')
+    }
+  }, [])
 
   // Handle language change with URL update
   const handleLanguageChange = (newLang: string) => {
@@ -126,9 +139,9 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('selectedLang', newLang)
       
-      // Update URL to include language code
+      // Update URL based on language - all languages now use prefix consistently
       const newUrl = currentView === 'home' 
-        ? `/${newLang}` 
+        ? `/${newLang}`
         : `/${newLang}/${selectedPrayer?.fields.slug || ''}`
       
       window.history.pushState(
@@ -245,16 +258,20 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       setSelectedPrayer(prayer)
       setCurrentView('prayer')
       
-      // Create URL-friendly slug
-      const prayerTitle = typeof prayer.fields.title === 'string' ? prayer.fields.title : String(prayer.fields.title)
-      const urlSlug = createUrlSlug(prayerTitle)
+      // Clean the original slug for URL use
+      const originalSlug = typeof prayer.fields.slug === 'string' ? prayer.fields.slug : String(prayer.fields.slug)
+      const urlSlug = cleanUrlSlug(originalSlug)
+      
+      // Create URL based on language - all languages now use prefix for consistency
+      const prayerUrl = `/${selectedLang}/${urlSlug}`
       
       // Push prayer view to history for system back button support
+      // Store the original slug for API calls
       if (typeof window !== 'undefined') {
         window.history.pushState(
           { view: 'prayer', prayerSlug: slug, lang: selectedLang }, 
           '', 
-          `/${selectedLang}/${urlSlug}`
+          prayerUrl
         )
       }
     }
@@ -275,7 +292,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     
     // Update browser history if this is a manual back action
     if (pushToHistory && typeof window !== 'undefined') {
-      const homeUrl = selectedLang === 'en' ? '/' : `/${selectedLang}`
+      const homeUrl = `/${selectedLang}`
       window.history.pushState({ view: 'home', lang: selectedLang }, '', homeUrl)
     }
     
@@ -284,10 +301,6 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       setSelectedPrayer(null)
       setIsAnimating(false)
     }, 300)
-  }
-
-  const handleClick_old = (slug: string) => {
-    router.push(`/${selectedLang}/${slug}`)
   }
 
   // Fallback function to generate readable tag names (same as in API)
