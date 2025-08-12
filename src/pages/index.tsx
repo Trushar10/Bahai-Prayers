@@ -147,41 +147,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     }
   }, [selectedLang])
 
-  useEffect(() => {
-    async function fetchPrayers() {
-      const res = await fetch(`/api/prayers?lang=${selectedLang}`)
-      const data = await res.json()
-  setFilteredPrayers(Array.isArray(data) ? data : (data.items ?? []))
-    }
-    fetchPrayers()
-  }, [selectedLang])
 
-  // Fetch tag names from Contentful
-  useEffect(() => {
-    async function fetchTagNames() {
-      // Collect all unique tag IDs from prayers
-      const tagIds = Array.from(
-        new Set(
-          filteredPrayers.flatMap(prayer =>
-            (prayer.metadata?.tags || []).map((tag: unknown) => (typeof tag === 'object' && tag && 'sys' in tag ? (tag as { sys: { id?: string } }).sys?.id : undefined))
-          ).filter(Boolean)
-        )
-      )
-      if (tagIds.length === 0) return
-      // Fetch tag details from Contentful
-      const res = await fetch(`/api/prayers?tags=${tagIds.join(',')}`)
-      const data = await res.json()
-      // Assume API returns { tags: [{ sys: { id }, name }] }
-      const mapping: { [id: string]: string } = {}
-      if (data.tags && Array.isArray(data.tags)) {
-        data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
-          mapping[tag.sys.id] = tag.name || tag.sys.id
-        })
-      }
-      setTagNames(mapping)
-    }
-    fetchTagNames()
-  }, [filteredPrayers])
 
   const handleClick = (slug: string) => {
     router.push(`/${selectedLang}/${slug}`)
