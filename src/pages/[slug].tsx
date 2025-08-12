@@ -130,7 +130,7 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#317EFB" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/profile-circle.webp" />
+        <link rel="icon" href="/bahai-stories.webp" />
       </Head>
 
       <div className="container show-single-post">

@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/profile-circle.webp",
+      "src": "/bahai-stories.webp",
       "sizes": "192x192",
       "type": "image/webp"
     },
     {
-      "src": "/profile-circle.webp",
+      "src": "/bahai-stories.webp",
       "sizes": "512x512",
       "type": "image/webp"
     }
