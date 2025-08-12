@@ -41,9 +41,15 @@ To enable automatic localized tag names without hard-coding translations, you ne
 
 ## Creating Tag Metadata Entries
 
-For each tag you use in your prayers, create an entry:
+For each tag you use in your prayers, create an entry. **Important**: Check your actual tag IDs first, as they vary by language:
 
-### Example: Obligatory Prayers Tag
+### Current Tag IDs in Your System:
+
+-   **English**: `generalPrayers`, `theObligatoryPrayers`
+-   **Hindi**: `obligatory-prayers`, `general-prayers`
+-   **Gujarati**: `obligatory-prayers-gu`, `general-prayers-gu`
+
+### Example: Obligatory Prayers Tag (for Hindi)
 
 1. **Create new entry** of type `Tag Metadata`
 2. **Tag ID**: `obligatory-prayers`
@@ -52,14 +58,34 @@ For each tag you use in your prayers, create an entry:
     - **Hindi**: "अनिवार्य प्रार्थनाएँ"
     - **Gujarati**: "ફરજિયાત પ્રાર્થનાઓ"
 
-### Example: General Prayers Tag
+### Example: Obligatory Prayers Tag (for Gujarati)
 
 1. **Create new entry** of type `Tag Metadata`
-2. **Tag ID**: `general-prayers`
+2. **Tag ID**: `obligatory-prayers-gu`
+3. **Display Name**:
+    - **English**: "The Obligatory Prayers"
+    - **Hindi**: "अनिवार्य प्रार्थनाएँ"
+    - **Gujarati**: "ફરજિયાત પ્રાર્થનાઓ"
+
+### Example: General Prayers Tag (for English)
+
+1. **Create new entry** of type `Tag Metadata`
+2. **Tag ID**: `generalPrayers`
 3. **Display Name**:
     - **English**: "General Prayers"
     - **Hindi**: "सामान्य प्रार्थनाएँ"
     - **Gujarati**: "સામાન્ય પ્રાર્થનાઓ"
+
+### Complete List of Entries to Create:
+
+You need to create entries for each unique tag ID:
+
+1. **Tag ID**: `obligatory-prayers` (Hindi)
+2. **Tag ID**: `general-prayers` (Hindi)
+3. **Tag ID**: `obligatory-prayers-gu` (Gujarati)
+4. **Tag ID**: `general-prayers-gu` (Gujarati)
+5. **Tag ID**: `generalPrayers` (English)
+6. **Tag ID**: `theObligatoryPrayers` (English)
 
 ## How It Works
 

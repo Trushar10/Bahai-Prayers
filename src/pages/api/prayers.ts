@@ -139,7 +139,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 // Simple function to generate basic readable names from tag IDs (no hard-coded localization)
 function generateBasicTagName(tagId: string): string {
+  // Handle specific known tag IDs with better names
+  const knownTags: { [key: string]: string } = {
+    'obligatory-prayers': 'The Obligatory Prayers',
+    'general-prayers': 'General Prayers',
+    'obligatory-prayers-gu': 'The Obligatory Prayers',
+    'general-prayers-gu': 'General Prayers',
+    'obligatory-prayers-hi': 'The Obligatory Prayers',
+    'general-prayers-hi': 'General Prayers',
+    'generalPrayers': 'General Prayers',
+    'theObligatoryPrayers': 'The Obligatory Prayers',
+    'obligatoryPrayers': 'The Obligatory Prayers',
+    'morning-prayers': 'Morning Prayers',
+    'evening-prayers': 'Evening Prayers',
+    'daily-prayers': 'Daily Prayers',
+    'spiritual-development': 'Spiritual Development',
+    'healing': 'Healing',
+    'unity': 'Unity',
+    'forgiveness': 'Forgiveness',
+    'assistance': 'Assistance',
+    'departed': 'For the Departed',
+    'steadfastness': 'Steadfastness',
+    'tests-difficulties': 'Tests and Difficulties',
+    'children': 'For Children',
+    'youth': 'For Youth',
+    'infants': 'For Infants',
+    'praise-gratitude': 'Praise and Gratitude'
+  };
+
+  // Check if we have a known tag first
+  if (knownTags[tagId]) {
+    return knownTags[tagId];
+  }
+
+  // Remove language suffixes (like -gu, -hi) for processing
+  const cleanTagId = tagId.replace(/-(gu|hi|en)$/, '');
+  
+  // Check if the clean version is known
+  if (knownTags[cleanTagId]) {
+    return knownTags[cleanTagId];
+  }
+
+  // Generate from the tag ID structure
   return tagId
+    .replace(/-(gu|hi|en)$/, '') // Remove language suffixes
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
