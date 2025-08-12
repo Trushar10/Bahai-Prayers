@@ -29,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ));
 
     console.log('All tag IDs found in prayers:', tagIds);
+    console.log('Processing prayers API request for production debugging');
 
     let tags: { sys: { id: string }, name?: string }[] = [];
     
