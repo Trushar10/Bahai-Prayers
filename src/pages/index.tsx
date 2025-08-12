@@ -6,6 +6,7 @@ import { Entry, EntryFieldTypes, EntrySkeletonType, EntrySys } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
 import { client } from '../lib/contentful'
 import ThemeToggle from '../components/ThemeToggle'
+import LanguageToggle from '../components/LanguageToggle'
 
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
@@ -19,111 +20,183 @@ interface GroupedPrayers {
   [tagName: string]: PrayerEntry[]
 }
 
-type PrayerCacheEntry = {
-  title: string;
-  body: string | Document | Record<string, unknown>;
-  slug: string;
-  sys: EntrySys;
-  metadata?: Record<string, unknown>;
-};
+// type PrayerCacheEntry = {
+//   title: string;
+//   body: string | Document | Record<string, unknown>;
+//   slug: string;
+//   sys: EntrySys;
+//   metadata?: Record<string, unknown>;
+// };
+
+interface Props {
+  prayers: PrayerEntry[];
+  languages: { code: string; name: string }[];
+  defaultLang: string;
+}
 
 export const getStaticProps: GetStaticProps = async () => {
+  // Fetch all languages dynamically from Contentful content types
+  const contentTypes = await client.getContentTypes();
+  const languages = contentTypes.items
+    .filter((ct) => ct.sys.id.startsWith('prayer-'))
+    .map((ct) => {
+      const code = ct.sys.id.split('-')[1];
+      return {
+        code,
+        name:
+          code === 'en'
+            ? 'English'
+            : code === 'hi'
+            ? 'हिन्दी'
+            : code === 'gu'
+            ? 'ગુજરાતી'
+            : code.toUpperCase(),
+      };
+    })
+    .sort((a, b) => {
+      // Sort so English comes first, then others alphabetically
+      if (a.code === 'en') return -1;
+      if (b.code === 'en') return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+  // Always default to English
+  const defaultLang = 'en';
+
+  // Fetch prayers for default language
   const res = await client.getEntries<PrayerSkeleton>({
-    content_type: 'prayer-eng',
+    content_type: `prayer-${defaultLang}`,
     include: 1,
-  })
+  });
+  // Sort prayers by title after fetching
+  res.items.sort((a, b) => {
+    const titleA = typeof a.fields.title === 'string' ? a.fields.title : '';
+    const titleB = typeof b.fields.title === 'string' ? b.fields.title : '';
+    return titleA.localeCompare(titleB);
+  });
 
   return {
     props: {
       prayers: res.items as PrayerEntry[],
+      languages,
+      defaultLang,
     },
     revalidate: 60,
   }
 }
 
-export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry[] }) {
-  const router = useRouter()
-  const [prayers, setPrayers] = useState<PrayerEntry[]>(initialPrayers)
-
-  const handleClick = (slug: string) => {
-    router.push(`/${slug}`)
-  }
-
-  async function cachePrayers(prayersToCache: PrayerEntry[]) {
-    const prayersData: Record<string, PrayerCacheEntry> = prayersToCache.reduce((acc, prayer) => {
-      if (typeof prayer.fields.slug === 'string') {
-        acc[prayer.fields.slug] = {
-          title: typeof prayer.fields.title === 'string'
-            ? prayer.fields.title
-            : 'Untitled',
-          body: prayer.fields.body,
-          slug: prayer.fields.slug,
-          sys: prayer.sys,
-          metadata: prayer.metadata
-        };
+export default function Home({ prayers, languages, defaultLang }: Props) {
+  // State to hold tag ID to name mapping
+  const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
+  // Get language from localStorage or default to English
+  const getInitialLang = () => {
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem('selectedLang')
+      if (savedLang && languages.some(l => l.code === savedLang)) {
+        return savedLang
       }
-      return acc;
-    }, {} as Record<string, PrayerCacheEntry>);
-
-    await storePrayersOffline(prayersData);
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        const slugs = prayersToCache
-          .map((p) => (typeof p.fields.slug === 'string' ? `/${p.fields.slug}` : null))
-          .filter((slug): slug is string => !!slug);
-
-        // Precache HTML pages
-        registration.active?.postMessage({
-          type: 'PRECACHE_PAGES',
-          payload: slugs,
-        });
-
-        // Precache API data
-        const apiUrls = slugs.map((slug) => `/api/prayer${slug}`);
-        registration.active?.postMessage({
-          type: 'PRECACHE_API',
-          payload: apiUrls,
-        });
-
-        // Cache structured prayers data
-        registration.active?.postMessage({
-          type: 'CACHE_PRAYERS_DATA',
-          payload: prayersData,
-        });
-      });
     }
+    // Always prefer English first
+    return 'en'
   }
+  const [selectedLang, setSelectedLang] = useState(getInitialLang())
+  const [filteredPrayers, setFilteredPrayers] = useState<Array<PrayerEntry>>(prayers || [])
+
+  // Fetch tag names from Contentful
+  // Fetch prayers and tag names together
+  useEffect(() => {
+    async function fetchPrayersAndTags() {
+      const res = await fetch(`/api/prayers?lang=${selectedLang}`)
+      const data = await res.json()
+      console.log('API response:', data)
+      // Set prayers
+      setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
+      // Build tag name mapping from API response
+      const mapping: { [id: string]: string } = {}
+      if (data.tags && Array.isArray(data.tags)) {
+        data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
+          mapping[tag.sys.id] = tag.name || tag.sys.id
+        })
+      }
+      console.log('Tag name mapping:', mapping)
+      // Log tag IDs used in prayers
+      const prayerTagIds = (Array.isArray(data.items) ? data.items : (data.items ?? [])).flatMap((prayer: unknown) => {
+        if (typeof prayer === 'object' && prayer && 'metadata' in prayer) {
+          const tags = (prayer as { metadata?: { tags?: unknown[] } }).metadata?.tags || [];
+          return tags.map((tag: unknown) => {
+            if (typeof tag === 'object' && tag && 'sys' in tag) {
+              return (tag as { sys?: { id?: string } }).sys?.id;
+            }
+            return undefined;
+          });
+        }
+        return [];
+      })
+      console.log('Prayer tag IDs:', prayerTagIds)
+      setTagNames(mapping)
+    }
+    fetchPrayersAndTags()
+  }, [selectedLang])
+  const router = useRouter()
+  // ...existing code...
+
+  // Persist selected language to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedLang', selectedLang)
+    }
+  }, [selectedLang])
 
   useEffect(() => {
-    const fetchLatest = async () => {
-      try {
-        const res = await fetch('/api/prayers');
-        if (res.ok) {
-          const latest: PrayerEntry[] = await res.json();
-          setPrayers(latest);
-          await cachePrayers(latest);
-        }
-      } catch (err) {
-        console.error('❌ Failed to fetch latest prayers:', err);
+    async function fetchPrayers() {
+      const res = await fetch(`/api/prayers?lang=${selectedLang}`)
+      const data = await res.json()
+  setFilteredPrayers(Array.isArray(data) ? data : (data.items ?? []))
+    }
+    fetchPrayers()
+  }, [selectedLang])
+
+  // Fetch tag names from Contentful
+  useEffect(() => {
+    async function fetchTagNames() {
+      // Collect all unique tag IDs from prayers
+      const tagIds = Array.from(
+        new Set(
+          filteredPrayers.flatMap(prayer =>
+            (prayer.metadata?.tags || []).map((tag: unknown) => (typeof tag === 'object' && tag && 'sys' in tag ? (tag as { sys: { id?: string } }).sys?.id : undefined))
+          ).filter(Boolean)
+        )
+      )
+      if (tagIds.length === 0) return
+      // Fetch tag details from Contentful
+      const res = await fetch(`/api/prayers?tags=${tagIds.join(',')}`)
+      const data = await res.json()
+      // Assume API returns { tags: [{ sys: { id }, name }] }
+      const mapping: { [id: string]: string } = {}
+      if (data.tags && Array.isArray(data.tags)) {
+        data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
+          mapping[tag.sys.id] = tag.name || tag.sys.id
+        })
       }
-    };
+      setTagNames(mapping)
+    }
+    fetchTagNames()
+  }, [filteredPrayers])
 
-    cachePrayers(initialPrayers); // Cache initial build data
-    fetchLatest(); // Try to refresh from Contentful
-  }, []);
+  const handleClick = (slug: string) => {
+    router.push(`/${selectedLang}/${slug}`)
+  }
 
-  const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
+  // Group prayers by tags (unchanged)
+  const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
     const tags = prayer.metadata?.tags || []
     if (tags.length === 0) {
       if (!acc['Other']) acc['Other'] = []
       acc['Other'].push(prayer)
     } else {
       tags.forEach((tag) => {
-        const tagName = tag.sys?.id || 'Other'
-        let displayName = tagName
-        if (tagName === 'theObligatoryPrayers') displayName = 'The Obligatory Prayers'
-        if (tagName === 'generalPrayers') displayName = 'General Prayers'
+        const tagId = tag.sys?.id || 'Other'
+        const displayName = tagNames[tagId] || tagId || 'Other'
         if (!acc[displayName]) acc[displayName] = []
         acc[displayName].push(prayer)
       })
@@ -139,8 +212,29 @@ export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry
     })
   })
 
-  const sectionOrder = ['The Obligatory Prayers', 'General Prayers', 'Other']
-  const orderedSections = sectionOrder.filter((section) => groupedPrayers[section]?.length > 0)
+  // Get all tag names and sort them alphabetically
+  // Custom order: The Obligatory Prayers, General Prayers, then others alphabetically, then Other
+  const obligatory = Object.keys(groupedPrayers).find(
+    name => name.toLowerCase().includes('obligatory')
+  )
+  const general = Object.keys(groupedPrayers).find(
+    name => name.toLowerCase().includes('general')
+  )
+  const other = Object.keys(groupedPrayers).find(
+    name => name.toLowerCase() === 'other'
+  )
+  // All other tags except the above
+  const rest = Object.keys(groupedPrayers)
+    .filter(
+      name => name !== obligatory && name !== general && name !== other
+    )
+    .sort((a, b) => a.localeCompare(b))
+  const orderedSections = [
+    obligatory,
+    general,
+    ...rest,
+    other
+  ].filter((name): name is string => typeof name === 'string' && Boolean(name))
 
   return (
     <>
@@ -156,7 +250,11 @@ export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry
         <header className="header">
           <div className="header-content">
             <div className="title">Prayers</div>
-            <ThemeToggle />
+            <LanguageToggle
+              languages={languages}
+              currentLang={selectedLang}
+              onChange={setSelectedLang}
+            />           
           </div>
         </header>
 
@@ -165,7 +263,7 @@ export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry
             <section key={sectionName} className="prayer-section">
               <h2 className="section-title">{sectionName}</h2>
               <div className="post-list">
-                {groupedPrayers[sectionName].map((p) => (
+                {groupedPrayers[sectionName].map((p: PrayerEntry) => (
                   <div
                     key={p.sys.id}
                     className="post-item"
@@ -189,31 +287,41 @@ export default function Home({ prayers: initialPrayers }: { prayers: PrayerEntry
             </section>
           ))}
         </main>
+        <footer className="footer">
+          <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
+        </footer>
+        <ThemeToggle className="theme-toggle-fixed" />
       </div>
     </>
   )
 }
 
-async function storePrayersOffline(prayersData: Record<string, PrayerCacheEntry>) {
-  return new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('PrayersDB', 1)
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => {
-      const db = request.result
-      const transaction = db.transaction(['prayers'], 'readwrite')
-      const store = transaction.objectStore('prayers')
-      store.clear()
-      Object.entries(prayersData).forEach(([slug, prayerData]) => {
-        store.put({ ...prayerData, id: slug })
-      })
-      transaction.oncomplete = () => resolve()
-      transaction.onerror = () => reject(transaction.error)
-    }
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains('prayers')) {
-        db.createObjectStore('prayers', { keyPath: 'id' })
-      }
-    }
-  })
-}
+// async function storePrayersOffline(prayersData: Record<string, PrayerCacheEntry>) {
+//   return new Promise<void>((resolve, reject) => {
+//     const request = indexedDB.open('PrayersDB', 1)
+//
+//     request.onerror = () => reject(request.error)
+//
+//     request.onsuccess = () => {
+//       const db = request.result
+//       const transaction = db.transaction(['prayers'], 'readwrite')
+//       const store = transaction.objectStore('prayers')
+//
+//       store.clear()
+//
+//       Object.entries(prayersData).forEach(([slug, prayerData]) => {
+//         store.put({ ...prayerData, id: slug })
+//       })
+//
+//       transaction.oncomplete = () => resolve()
+//       transaction.onerror = () => reject(transaction.error)
+//     }
+//
+//     request.onupgradeneeded = () => {
+//       const db = request.result
+//       if (!db.objectStoreNames.contains('prayers')) {
+//         db.createObjectStore('prayers', { keyPath: 'id' })
+//       }
+//     }
+//   })
+// }

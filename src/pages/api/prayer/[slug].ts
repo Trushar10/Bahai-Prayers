@@ -1,26 +1,33 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from 'next';
 import { client } from '../../../lib/contentful';
-import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful';
+import { EntrySkeletonType, EntryFieldTypes } from 'contentful';
 
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text;
   slug: EntryFieldTypes.Text;
-  body: EntryFieldTypes.RichText;
+  content: EntryFieldTypes.RichText;
 }>;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { slug } = req.query;
   try {
-    const result = await client.getEntries<PrayerSkeleton>({
-      content_type: 'prayer-eng',
-      'fields.slug': slug as string,
+    const { slug, lang } = req.query;
+    const langCode = (lang as string) || 'en';
+    const slugStr = Array.isArray(slug) ? slug[0] : slug;
+
+    const entries = await client.getEntries<PrayerSkeleton>({
+      content_type: `prayer-${langCode}`,
+      'fields.slug': slugStr,
     });
-    if (result.items.length) {
-      res.status(200).json(result.items[0]);
-    } else {
+
+    if (!entries.items.length) {
       res.status(404).json({ error: 'Prayer not found' });
+      return;
     }
-  } catch (err) {
+
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
+    res.status(200).json(entries.items[0]);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to fetch prayer' });
   }
 }

@@ -11,6 +11,10 @@
 	--author-border: #e5e7eb;
 	--container-shadow: #e2e8f0;
 	--container-bg: #ffffff;
+	--menu-bg: #ffffff;
+	--menu-border: #ccc;
+	--menu-shadow: rgba(0, 0, 0, 0.15);
+	--menu-item-hover: #f0f0f0;
 }
 
 :root[data-theme='dark'] {
@@ -26,6 +30,10 @@
 	--author-border: #444;
 	--container-shadow: #334155;
 	--container-bg: #1e293b;
+	--menu-bg: #334155;
+	--menu-border: #555;
+	--menu-shadow: rgba(0, 0, 0, 0.25);
+	--menu-item-hover: #475569;
 }
 
 * {
@@ -105,6 +113,7 @@ body {
 
 /* Container */
 .container {
+	position: relative;
 	max-width: 480px;
 	margin: 0 auto 5rem;
 	min-height: calc(100vh - 57px);
@@ -201,46 +210,190 @@ body {
 }
 
 /* Theme toggle button */
-.theme-toggle-btn {
-	position: absolute;
+/* fixed theme toggle style (bottom-right) */
+.theme-toggle-fixed {
+	position: fixed !important;
+	bottom: 20px;
 	right: 20px;
+	background: var(--container-bg);
+	border: 1px solid var(--header-border);
+	border-radius: 9999px;
+	padding: 8px;
+	width: 48px;
+	height: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	z-index: 300;
+}
+
+/* ensure language select doesn't overlap on very small screens */
+@media (max-width: 420px) {
+	.language-select {
+		right: 56px !important;
+		font-size: 13px !important;
+		padding: 6px !important;
+	}
+}
+
+/* Add missing classes used in your React components */
+
+/* .navbar */
+.navbar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 24px;
+	height: 56px;
+	background: var(--header-bg);
+	border-bottom: 1px solid var(--header-border);
+}
+
+/* .navbar-brand */
+.navbar-brand {
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+/* .navbar-actions */
+.navbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+/* .prayer-link */
+.prayer-link {
+	text-decoration: none;
+	color: var(--link);
+	font-weight: 500;
+	transition: color 0.2s;
+}
+.prayer-link:hover {
+	color: #0056b3;
+}
+
+/* .prayer-title */
+.prayer-title {
+	font-size: 22px;
+	font-weight: 600;
+	color: var(--text);
+}
+
+/* .theme-toggle-fixed */
+.theme-toggle-fixed {
+	position: fixed;
+	bottom: 24px;
+	right: 24px;
 	background: none;
 	border: none;
-	padding: 6px;
 	cursor: pointer;
-	color: var(--text); /* Icons adapt to theme color */
+	font-size: 18px;
+	color: var(--text);
+	z-index: 1000;
 }
 
-.prayer-section {
-	margin-bottom: 1rem;
+/* .main-wrapper */
+.main-wrapper {
+	min-height: 100vh;
+	background: var(--bg);
+	display: flex;
+	flex-direction: column;
 }
 
-/* Responsive adjustments */
+/* .footer */
+.footer {
+	text-align: center;
+	padding: 16px 0;
+	font-size: 14px;
+	color: var(--author-text);
+	background: var(--hover-bg);
+	border-top: 1px solid var(--header-border);
+}
+
+/* Responsive for .navbar and .main-wrapper */
 @media (max-width: 480px) {
 	.container {
-		margin: 0 auto;
-		box-shadow: none;
-		border-radius: unset;
 		min-height: calc(100vh - 0px);
+		margin: 0;
 	}
 
-	.header-content {
-		padding: 16px 20px;
-	}
-
-	.homepage {
-		padding: 20px 20px;
-	}
-
-	.post-list {
-		padding: 0 20px;
+	.navbar {
+		padding: 0 12px;
+		height: 48px;
 	}
 
 	.single-post {
-		padding: 28px 20px;
+		padding: 32px 32px 80px;
 	}
+}
 
-	.post-content h1 {
-		font-size: 24px;
-	}
+/* Language Toggle Styles */
+.language-toggle-container {
+	position: absolute;
+	display: inline-block;
+	right: 22px;
+	top: 50%;
+	transform: translateY(-37%);
+}
+
+.language-toggle-button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	color: var(--text);
+	transition: color 0.4s ease;
+}
+
+.language-toggle-button:hover {
+	opacity: 0.7;
+}
+
+.language-menu {
+	position: absolute;
+	top: 110%;
+	right: 0;
+	background: var(--menu-bg);
+	border: 1px solid var(--menu-border);
+	border-radius: 6px;
+	box-shadow: 0 2px 8px var(--menu-shadow);
+	z-index: 100;
+	min-width: 120px;
+	transition: background-color 0.4s ease, border-color 0.4s ease;
+}
+
+.language-menu-item {
+	display: block;
+	width: 100%;
+	padding: 8px 16px;
+	background: transparent;
+	border: none;
+	text-align: left;
+	cursor: pointer;
+	color: var(--text);
+	transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.language-menu-item:hover {
+	background: var(--menu-item-hover);
+}
+
+.language-menu-item.active {
+	font-weight: bold;
+	background: var(--menu-item-hover);
+}
+
+.language-menu-item:first-child {
+	border-radius: 6px 6px 0 0;
+}
+
+.language-menu-item:last-child {
+	border-radius: 0 0 6px 6px;
+}
+
+.language-menu-item:only-child {
+	border-radius: 6px;
 }
