@@ -1,12 +1,11 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { Entry, EntrySkeletonType, EntryFieldTypes, EntrySys } from 'contentful';
-import { client } from '../../lib/contentful';
+import { Entry, EntrySkeletonType, EntryFieldTypes } from 'contentful';
+import { client } from '../lib/contentful';
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Document } from '@contentful/rich-text-types';
-import ThemeToggle from '../../components/ThemeToggle';
-import { useEffect, useState } from 'react';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Helper function to clean URL slugs (replace spaces with hyphens)
 const cleanUrlSlug = (text: string): string => {
@@ -24,20 +23,10 @@ type PrayerSkeleton = EntrySkeletonType<{
 
 type PrayerEntry = Entry<PrayerSkeleton>;
 
-type CachedPrayer = {
-  fields: {
-    title: string;
-    slug: string;
-    body: string | Document | Record<string, unknown>;
-  };
-  sys: EntrySys;
-  metadata?: Record<string, unknown>;
-};
-
 export const getStaticPaths: GetStaticPaths = async () => {
-  // Dynamically fetch all languages and slugs
+  // Fetch all slugs from all supported languages
   const contentTypes = await client.getContentTypes();
-  const paths: { params: { lang: string; slug: string } }[] = [];
+  const paths: { params: { slug: string } }[] = [];
 
   for (const ct of contentTypes.items) {
     if (ct.sys.id.startsWith('prayer-')) {
@@ -50,7 +39,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
       res.items.forEach((item) => {
         // Clean the original slug for URL use
         const cleanSlug = cleanUrlSlug(item.fields.slug);
-        paths.push({ params: { lang: langCode, slug: cleanSlug } });
+        paths.push({ params: { slug: cleanSlug } });
       });
     }
   }
@@ -62,18 +51,32 @@ export const getStaticPaths: GetStaticPaths = async () => {
 };
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const langCode = params?.lang ? String(params.lang) : 'en';
   const urlSlug = params?.slug as string;
 
-  // Get all prayers for this language to find the one matching our URL slug
-  const res = await client.getEntries<PrayerSkeleton>({
-    content_type: `prayer-${langCode}`,
-  });
+  // Try to find the prayer in any language, defaulting to English
+  const languages = ['en', 'hi', 'gu'];
+  let matchingPrayer: PrayerEntry | null = null;
 
-  // Find prayer where the cleaned slug matches our URL slug
-  const matchingPrayer = res.items.find(item => {
-    return cleanUrlSlug(item.fields.slug) === urlSlug;
-  });
+  for (const langCode of languages) {
+    try {
+      const res = await client.getEntries<PrayerSkeleton>({
+        content_type: `prayer-${langCode}`,
+      });
+
+      // Find prayer where the cleaned slug matches our URL slug
+      const prayer = res.items.find(item => {
+        return cleanUrlSlug(item.fields.slug) === urlSlug;
+      });
+
+      if (prayer) {
+        matchingPrayer = prayer as PrayerEntry;
+        break;
+      }
+    } catch (error) {
+      // Continue to next language if this one fails
+      continue;
+    }
+  }
 
   if (!matchingPrayer) {
     return { notFound: true };
@@ -81,40 +84,14 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 
   return {
     props: {
-      prayer: matchingPrayer as PrayerEntry,
+      prayer: matchingPrayer,
     },
     revalidate: 60,
   };
 };
 
-export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEntry }) {
+export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
   const router = useRouter();
-  const [prayer, setPrayer] = useState<PrayerEntry | CachedPrayer | null>(initialPrayer);
-  const [isOffline, setIsOffline] = useState(false);
-  const { slug } = router.query;
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    setIsOffline(!navigator.onLine);
-
-    if (!prayer && typeof slug === 'string') {
-      loadPrayerFromCache(slug).then((cachedPrayer) => {
-        if (cachedPrayer) {
-          setPrayer(cachedPrayer);
-        }
-      });
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [prayer, slug]);
 
   if (!prayer) {
     return (
@@ -134,11 +111,7 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
           <main className="single-post">
             <div className="post-content">
               <h1>Prayer Not Available</h1>
-              <p>
-                {isOffline
-                  ? "This prayer is not available offline. Please connect to the internet and try again."
-                  : "The requested prayer could not be found."}
-              </p>
+              <p>The requested prayer could not be found.</p>
             </div>
           </main>
         </div>
@@ -161,18 +134,6 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
       </Head>
 
       <div className="container show-single-post">
-        {isOffline && (
-          <div style={{
-            backgroundColor: '#f39c12',
-            color: 'white',
-            padding: '8px',
-            textAlign: 'center',
-            fontSize: '14px'
-          }}>
-            📱 Viewing offline content
-          </div>
-        )}
-
         <header className="header">
           <div className="header-content">
             <button className="back-btn" onClick={() => router.back()}>
@@ -198,45 +159,11 @@ export default function PrayerPage({ prayer: initialPrayer }: { prayer: PrayerEn
             </div>
           </article>
         </main>
-           <footer className="footer">
-              <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
-            </footer>
-            <ThemeToggle className="theme-toggle-fixed" />
+        <footer className="footer">
+          <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
+        </footer>
+        <ThemeToggle className="theme-toggle-fixed" />
       </div>
     </>
   );
-}
-
-async function loadPrayerFromCache(slug: string): Promise<CachedPrayer | null> {
-  return new Promise((resolve) => {
-    const request = indexedDB.open('PrayersDB', 1);
-
-    request.onerror = () => resolve(null);
-
-    request.onsuccess = () => {
-      const db = request.result;
-      const transaction = db.transaction(['prayers'], 'readonly');
-      const store = transaction.objectStore('prayers');
-      const getRequest = store.get(slug);
-
-      getRequest.onsuccess = () => {
-        const result = getRequest.result;
-        if (result) {
-          resolve({
-            fields: {
-              title: result.title,
-              slug: result.slug,
-              body: result.body,
-            },
-            sys: result.sys,
-            metadata: result.metadata,
-          });
-        } else {
-          resolve(null);
-        }
-      };
-
-      getRequest.onerror = () => resolve(null);
-    };
-  });
 }
