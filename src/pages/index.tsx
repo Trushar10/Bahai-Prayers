@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { GetStaticProps } from 'next'
+import { useRouter } from 'next/router'
 import { useEffect, useState, useMemo } from 'react'
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
@@ -93,6 +94,7 @@ export const getStaticProps: GetStaticProps = async () => {
 }
 
 export default function Home({ prayers, languages }: Props) {
+  const router = useRouter()
   // State to hold tag ID to name mapping
   const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
   
@@ -124,12 +126,14 @@ export default function Home({ prayers, languages }: Props) {
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Redirect root path to /en for consistency
+  // Only redirect root path to /en if no language is already set
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.pathname === '/') {
-      window.history.replaceState(null, '', '/en')
+      const savedLang = localStorage.getItem('selectedLang')
+      const targetLang = savedLang && ['en', 'hi', 'gu'].includes(savedLang) ? savedLang : 'en'
+      router.replace(`/${targetLang}`)
     }
-  }, [])
+  }, [router])
 
   // Handle language change with URL update
   const handleLanguageChange = (newLang: string) => {
