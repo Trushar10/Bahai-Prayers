@@ -249,9 +249,6 @@ export default function Home({ prayers, languages }: Props) {
     
     setIsAnimating(true)
     
-    // Immediate scroll to top when starting transition
-    window.scrollTo({ top: 0, behavior: 'instant' })
-    
     const prayer = await fetchPrayerContent(slug)
     
     if (prayer) {
@@ -274,6 +271,11 @@ export default function Home({ prayers, languages }: Props) {
           prayerUrl
         )
       }
+      
+      // Scroll to top instantly so user can read from the beginning
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' })
+      }, 100)
     }
     
     // Small delay to ensure state updates before animation ends
@@ -284,9 +286,6 @@ export default function Home({ prayers, languages }: Props) {
     if (isAnimating) return
     
     setIsAnimating(true)
-    
-    // Immediate scroll to top when starting transition
-    window.scrollTo({ top: 0, behavior: 'instant' })
     
     setCurrentView('home')
     
