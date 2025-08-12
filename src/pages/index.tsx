@@ -170,22 +170,44 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     if (isAnimating) return
     
     setIsAnimating(true)
+    
+    // Immediate scroll to top when starting transition
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    
     const prayer = await fetchPrayerContent(slug)
     
     if (prayer) {
       setSelectedPrayer(prayer)
       setCurrentView('prayer')
+      
+      // Push prayer view to history for system back button support
+      if (typeof window !== 'undefined') {
+        window.history.pushState(
+          { view: 'prayer', prayerSlug: slug }, 
+          '', 
+          `/${selectedLang}/${slug}`
+        )
+      }
     }
     
     // Small delay to ensure state updates before animation ends
     setTimeout(() => setIsAnimating(false), 300)
   }
 
-  const handleBack = () => {
+  const handleBack = (pushToHistory: boolean = true) => {
     if (isAnimating) return
     
     setIsAnimating(true)
+    
+    // Immediate scroll to top when starting transition
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    
     setCurrentView('home')
+    
+    // Update browser history if this is a manual back action
+    if (pushToHistory && typeof window !== 'undefined') {
+      window.history.pushState({ view: 'home' }, '', '/')
+    }
     
     // Clear selected prayer after animation
     setTimeout(() => {
@@ -197,6 +219,38 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   const handleClick_old = (slug: string) => {
     router.push(`/${selectedLang}/${slug}`)
   }
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.view === 'prayer' && event.state?.prayerSlug) {
+        // Navigate to prayer view
+        const prayerSlug = event.state.prayerSlug
+        fetchPrayerContent(prayerSlug).then((prayer) => {
+          if (prayer) {
+            // Immediate scroll to top when navigating via browser back/forward
+            window.scrollTo({ top: 0, behavior: 'instant' })
+            setSelectedPrayer(prayer)
+            setCurrentView('prayer')
+          }
+        })
+      } else {
+        // Navigate back to home
+        handleBack(false) // false = don't push to history
+      }
+    }
+
+    // Set initial history state
+    if (typeof window !== 'undefined' && !window.history.state) {
+      window.history.replaceState({ view: 'home' }, '', window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [selectedLang])
 
   // Group prayers by tags (unchanged)
   const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
@@ -251,10 +305,19 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     <>
       <Head>
         <title>Prayers</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/profile-circle.webp" />
         <meta name="theme-color" content="#317EFB" />
+        
+        {/* Mobile app-like behavior */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Prayer App" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        
+        {/* Prevent zoom on input focus */}
+        <meta name="format-detection" content="telephone=no" />
       </Head>
 
       <div className="container">
@@ -312,7 +375,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
               <>
                 <header className="header">
                   <div className="header-content">
-                    <button className="back-btn" onClick={handleBack}>
+                    <button className="back-btn" onClick={() => handleBack()}>
                       ← Back
                     </button>
                     <div className="title">
