@@ -109,29 +109,62 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   // Fetch prayers and tag names together
   useEffect(() => {
     async function fetchPrayersAndTags() {
-      console.log(`Fetching prayers for language: ${selectedLang}`)
       const res = await fetch(`/api/prayers?lang=${selectedLang}`)
       const data = await res.json()
-      
-      console.log('API response:', { 
-        itemsCount: data.items?.length, 
-        tagsCount: data.tags?.length,
-        tags: data.tags 
-      })
       
       // Set prayers
       setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
       
-      // Build tag name mapping from API response
+      // Build comprehensive tag name mapping from API response + fallbacks
       const mapping: { [id: string]: string } = {}
+      
+      // First, add mappings from API response
       if (data.tags && Array.isArray(data.tags)) {
         data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
           mapping[tag.sys.id] = tag.name || tag.sys.id
-          console.log(`Tag mapping: ${tag.sys.id} -> ${tag.name || tag.sys.id}`)
         })
       }
       
-      console.log('Final tag mapping:', mapping)
+      // Also add comprehensive fallback mappings for any tag IDs we might encounter
+      const fallbackMappings = {
+        // Kebab-case IDs (from Management API)
+        'obligatory-prayers': 'The Obligatory Prayers',
+        'general-prayers': 'General Prayers',
+        'morning-prayers': 'Morning Prayers',
+        'evening-prayers': 'Evening Prayers',
+        'daily-prayers': 'Daily Prayers',
+        'special-prayers': 'Special Prayers',
+        'healing-prayers': 'Healing Prayers',
+        'protection-prayers': 'Protection Prayers',
+        
+        // CamelCase IDs (from prayer metadata)
+        'generalPrayers': 'General Prayers',
+        'theObligatoryPrayers': 'The Obligatory Prayers',
+        'obligatoryPrayers': 'The Obligatory Prayers',
+        'specialPrayers': 'Special Prayers',
+        'morningPrayers': 'Morning Prayers',
+        'eveningPrayers': 'Evening Prayers',
+        'healingPrayers': 'Healing Prayers',
+        'protectionPrayers': 'Protection Prayers',
+        
+        // Short forms
+        'obligatory': 'The Obligatory Prayers',
+        'general': 'General Prayers',
+        'morning': 'Morning Prayers',
+        'evening': 'Evening Prayers',
+        'daily': 'Daily Prayers',
+        'special': 'Special Prayers',
+        'healing': 'Healing Prayers',
+        'protection': 'Protection Prayers',
+      };
+      
+      // Add fallback mappings (without overriding API mappings)
+      Object.entries(fallbackMappings).forEach(([id, name]) => {
+        if (!mapping[id]) {
+          mapping[id] = name;
+        }
+      });
+      
       setTagNames(mapping)
     }
     fetchPrayersAndTags()
@@ -267,12 +300,9 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
         // Try to get tag name from tagNames mapping, otherwise use fallback
         let displayName = tagNames[tagId]
         
-        console.log(`Processing tag: ${tagId}, mapped name: ${displayName}, has mapping: ${!!tagNames[tagId]}`)
-        
         if (!displayName || displayName === tagId) {
           // Fallback tag name generation if mapping failed
           displayName = generateFallbackTagName(tagId)
-          console.log(`Using fallback for ${tagId}: ${displayName}`)
         }
         
         if (!acc[displayName]) acc[displayName] = []
