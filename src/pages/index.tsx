@@ -109,8 +109,15 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   // Fetch prayers and tag names together
   useEffect(() => {
     async function fetchPrayersAndTags() {
+      console.log(`Fetching prayers for language: ${selectedLang}`)
       const res = await fetch(`/api/prayers?lang=${selectedLang}`)
       const data = await res.json()
+      
+      console.log('API response:', { 
+        itemsCount: data.items?.length, 
+        tagsCount: data.tags?.length,
+        tags: data.tags 
+      })
       
       // Set prayers
       setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
@@ -120,9 +127,11 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       if (data.tags && Array.isArray(data.tags)) {
         data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
           mapping[tag.sys.id] = tag.name || tag.sys.id
+          console.log(`Tag mapping: ${tag.sys.id} -> ${tag.name || tag.sys.id}`)
         })
       }
       
+      console.log('Final tag mapping:', mapping)
       setTagNames(mapping)
     }
     fetchPrayersAndTags()
@@ -258,9 +267,12 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
         // Try to get tag name from tagNames mapping, otherwise use fallback
         let displayName = tagNames[tagId]
         
+        console.log(`Processing tag: ${tagId}, mapped name: ${displayName}, has mapping: ${!!tagNames[tagId]}`)
+        
         if (!displayName || displayName === tagId) {
           // Fallback tag name generation if mapping failed
           displayName = generateFallbackTagName(tagId)
+          console.log(`Using fallback for ${tagId}: ${displayName}`)
         }
         
         if (!acc[displayName]) acc[displayName] = []
