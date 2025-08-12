@@ -56,7 +56,7 @@ For each tag you use in your prayers, create an entry. **Important**: Check your
 3. **Display Name**:
     - **English**: "The Obligatory Prayers"
     - **Hindi**: "अनिवार्य प्रार्थनाएँ"
-    - **Gujarati**: "ફરજિયાત પ્રાર્થનાઓ"
+    - **Gujarati**: "અનિવાર્ય પ્રાર્થના"
 
 ### Example: Obligatory Prayers Tag (for Gujarati)
 
@@ -65,7 +65,7 @@ For each tag you use in your prayers, create an entry. **Important**: Check your
 3. **Display Name**:
     - **English**: "The Obligatory Prayers"
     - **Hindi**: "अनिवार्य प्रार्थनाएँ"
-    - **Gujarati**: "ફરજિયાત પ્રાર્થનાઓ"
+    - **Gujarati**: "અનિવાર્ય પ્રાર્થના"
 
 ### Example: General Prayers Tag (for English)
 

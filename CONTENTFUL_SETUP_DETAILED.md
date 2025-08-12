@@ -69,7 +69,7 @@ Now create one entry for each unique tag ID found in your system:
 3. **Display Name** (click the locale switcher to set each language):
     - **English (en-US)**: `The Obligatory Prayers`
     - **Hindi (hi)**: `अनिवार्य प्रार्थनाएँ`
-    - **Gujarati (gu)**: `ફરજિયાત પ્રાર્થનાઓ`
+    - **Gujarati (gu)**: `અનિવાર્ય પ્રાર્થના`
 4. **Click**: "Publish"
 
 ### Entry 2: `general-prayers` (Hindi prayers)
@@ -89,7 +89,7 @@ Now create one entry for each unique tag ID found in your system:
 3. **Display Name**:
     - **English (en-US)**: `The Obligatory Prayers`
     - **Hindi (hi)**: `अनिवार्य प्रार्थनाएँ`
-    - **Gujarati (gu)**: `ફરજિયાત પ્રાર્થનાઓ`
+    - **Gujarati (gu)**: `અનિવાર્ય પ્રાર્થના`
 4. **Click**: "Publish"
 
 ### Entry 4: `general-prayers-gu` (Gujarati prayers)
@@ -119,7 +119,7 @@ Now create one entry for each unique tag ID found in your system:
 3. **Display Name**:
     - **English (en-US)**: `The Obligatory Prayers`
     - **Hindi (hi)**: `अनिवार्य प्रार्थनाएँ`
-    - **Gujarati (gu)**: `ફરજિયાત પ્રાર્થનાઓ`
+    - **Gujarati (gu)**: `અનિવાર્ય પ્રાર્થના`
 4. **Click**: "Publish"
 
 ## Step 6: Verify Setup
