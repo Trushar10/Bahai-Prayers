@@ -106,24 +106,29 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
 
-  // Fetch tag names from Contentful
   // Fetch prayers and tag names together
   useEffect(() => {
     async function fetchPrayersAndTags() {
+      console.log('Fetching prayers and tags for language:', selectedLang)
       const res = await fetch(`/api/prayers?lang=${selectedLang}`)
       const data = await res.json()
       console.log('API response:', data)
+      
       // Set prayers
       setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
+      
       // Build tag name mapping from API response
       const mapping: { [id: string]: string } = {}
       if (data.tags && Array.isArray(data.tags)) {
         data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
           mapping[tag.sys.id] = tag.name || tag.sys.id
         })
+        console.log('Tag name mapping built:', mapping)
+      } else {
+        console.warn('No tags found in API response or invalid format')
       }
-      console.log('Tag name mapping:', mapping)
-      // Log tag IDs used in prayers
+      
+      // Log tag IDs used in prayers for debugging
       const prayerTagIds = (Array.isArray(data.items) ? data.items : (data.items ?? [])).flatMap((prayer: unknown) => {
         if (typeof prayer === 'object' && prayer && 'metadata' in prayer) {
           const tags = (prayer as { metadata?: { tags?: unknown[] } }).metadata?.tags || [];
@@ -135,8 +140,11 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
           });
         }
         return [];
-      })
-      console.log('Prayer tag IDs:', prayerTagIds)
+      }).filter(Boolean)
+      
+      console.log('Prayer tag IDs found:', [...new Set(prayerTagIds)])
+      console.log('Tags available in mapping:', Object.keys(mapping))
+      
       setTagNames(mapping)
     }
     fetchPrayersAndTags()
@@ -252,7 +260,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     }
   }, [selectedLang])
 
-  // Group prayers by tags (unchanged)
+  // Group prayers by tags
   const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
     const tags = prayer.metadata?.tags || []
     if (tags.length === 0) {
@@ -261,13 +269,52 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     } else {
       tags.forEach((tag) => {
         const tagId = tag.sys?.id || 'Other'
-        const displayName = tagNames[tagId] || tagId || 'Other'
+        
+        // Try to get tag name from tagNames mapping, otherwise use fallback
+        let displayName = tagNames[tagId]
+        
+        if (!displayName || displayName === tagId) {
+          // Fallback tag name generation if mapping failed
+          displayName = generateFallbackTagName(tagId)
+        }
+        
+        console.log(`Tag mapping: ${tagId} -> ${displayName}`)
+        
         if (!acc[displayName]) acc[displayName] = []
         acc[displayName].push(prayer)
       })
     }
     return acc
   }, {} as GroupedPrayers)
+
+  // Fallback function to generate readable tag names (same as in API)
+  const generateFallbackTagName = (tagId: string): string => {
+    const tagNameMap: { [key: string]: string } = {
+      'obligatory-prayers': 'The Obligatory Prayers',
+      'general-prayers': 'General Prayers',
+      'morning-prayers': 'Morning Prayers',
+      'evening-prayers': 'Evening Prayers',
+      'daily-prayers': 'Daily Prayers',
+      'special-prayers': 'Special Prayers',
+      'healing-prayers': 'Healing Prayers',
+      'protection-prayers': 'Protection Prayers',
+      'spiritual-development': 'Spiritual Development',
+      'devotional-prayers': 'Devotional Prayers',
+      'obligatory': 'The Obligatory Prayers',
+      'general': 'General Prayers',
+      'morning': 'Morning Prayers',
+      'evening': 'Evening Prayers',
+      'daily': 'Daily Prayers',
+      'special': 'Special Prayers',
+      'healing': 'Healing Prayers',
+      'protection': 'Protection Prayers',
+    };
+    
+    return tagNameMap[tagId] || tagId
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 
   Object.keys(groupedPrayers).forEach((tag) => {
     groupedPrayers[tag].sort((a, b) => {
