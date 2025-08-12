@@ -81,9 +81,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               .filter(tag => tagIds.includes((tag as { sys: { id: string } }).sys.id))
               .map(tag => {
                 const t = tag as { sys: { id: string }, name?: string };
-                return { sys: { id: t.sys.id }, name: String(t.name) };
+                // Use localized name generation instead of just returning the Management API name
+                return { sys: { id: t.sys.id }, name: generateLocalizedTagName(t.sys.id, langCode) };
               });
-            console.log('Got tag names from Management API as fallback:', tags.length);
+            console.log('Got tag names from Management API with localization:', tags.length);
           }
           
           if (tags.length === 0) {
@@ -92,12 +93,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         } catch (managementApiError) {
           console.error('Management API failed, using final fallback:', managementApiError);
           
-          // Final fallback: Generate basic names from tag IDs
+          // Final fallback: Generate localized names from tag IDs
           tags = tagIds.map(tagId => ({
             sys: { id: tagId },
-            name: generateBasicTagName(tagId)
+            name: generateLocalizedTagName(tagId, langCode)
           }));
-          console.log('Generated basic fallback tags:', tags);
+          console.log('Generated localized fallback tags:', tags);
         }
       }
     }
@@ -107,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn('No tags generated, creating emergency fallback');
       tags = tagIds.map(tagId => ({
         sys: { id: tagId },
-        name: generateBasicTagName(tagId)
+        name: generateLocalizedTagName(tagId, langCode)
       }));
     }
 
@@ -122,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log(`Adding missing tag mapping for: ${tagId}`);
         finalTags.push({
           sys: { id: tagId },
-          name: generateBasicTagName(tagId)
+          name: generateLocalizedTagName(tagId, langCode)
         });
       }
     });
@@ -137,50 +138,164 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// Simple function to generate basic readable names from tag IDs (no hard-coded localization)
-function generateBasicTagName(tagId: string): string {
-  // Handle specific known tag IDs with better names
-  const knownTags: { [key: string]: string } = {
-    'obligatory-prayers': 'The Obligatory Prayers',
-    'general-prayers': 'General Prayers',
-    'obligatory-prayers-gu': 'The Obligatory Prayers',
-    'general-prayers-gu': 'General Prayers',
-    'obligatory-prayers-hi': 'The Obligatory Prayers',
-    'general-prayers-hi': 'General Prayers',
-    'generalPrayers': 'General Prayers',
-    'theObligatoryPrayers': 'The Obligatory Prayers',
-    'obligatoryPrayers': 'The Obligatory Prayers',
-    'morning-prayers': 'Morning Prayers',
-    'evening-prayers': 'Evening Prayers',
-    'daily-prayers': 'Daily Prayers',
-    'spiritual-development': 'Spiritual Development',
-    'healing': 'Healing',
-    'unity': 'Unity',
-    'forgiveness': 'Forgiveness',
-    'assistance': 'Assistance',
-    'departed': 'For the Departed',
-    'steadfastness': 'Steadfastness',
-    'tests-difficulties': 'Tests and Difficulties',
-    'children': 'For Children',
-    'youth': 'For Youth',
-    'infants': 'For Infants',
-    'praise-gratitude': 'Praise and Gratitude'
+// Function to generate localized tag names based on language
+function generateLocalizedTagName(tagId: string, langCode: string): string {
+  // Localized tag name mappings
+  const tagMappings: Record<string, Record<string, string>> = {
+    'obligatory-prayers': {
+      'en': 'The Obligatory Prayers',
+      'hi': 'अनिवार्य प्रार्थनाएँ',
+      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
+    },
+    'general-prayers': {
+      'en': 'General Prayers',
+      'hi': 'सामान्य प्रार्थनाएँ',
+      'gu': 'સામાન્ય પ્રાર્થનાઓ'
+    },
+    'obligatory-prayers-gu': {
+      'en': 'The Obligatory Prayers',
+      'hi': 'अनिवार्य प्रार्थनाएँ',
+      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
+    },
+    'general-prayers-gu': {
+      'en': 'General Prayers',
+      'hi': 'सामान्य प्रार्થनाएँ',
+      'gu': 'સામાન્ય પ્રાર્થનાઓ'
+    },
+    'obligatory-prayers-hi': {
+      'en': 'The Obligatory Prayers',
+      'hi': 'अनिवार्य प्रार्थनाएँ',
+      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
+    },
+    'general-prayers-hi': {
+      'en': 'General Prayers',
+      'hi': 'सामान्य प्रार्થनाएँ',
+      'gu': 'સામાન્ય પ્રાર્થનાઓ'
+    },
+    'generalPrayers': {
+      'en': 'General Prayers',
+      'hi': 'सामान्य प्रार्थनाएँ',
+      'gu': 'સામાન્ય પ્રાર્થનાઓ'
+    },
+    'theObligatoryPrayers': {
+      'en': 'The Obligatory Prayers',
+      'hi': 'अनिवार्य प्रार्थनाएँ',
+      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
+    },
+    'obligatoryPrayers': {
+      'en': 'The Obligatory Prayers',
+      'hi': 'अनिवार्य प्रार्थनाएँ',
+      'gu': 'ફરજિયાત પ્રાર્થનાઓ'
+    },
+    'morning-prayers': {
+      'en': 'Morning Prayers',
+      'hi': 'प्रातःकालीन प्रार्थनाएँ',
+      'gu': 'સવારની પ્રાર્થનાઓ'
+    },
+    'evening-prayers': {
+      'en': 'Evening Prayers',
+      'hi': 'सायंकालीन प्रार्थनाएँ',
+      'gu': 'સાંજની પ્રાર્થનાઓ'
+    },
+    'daily-prayers': {
+      'en': 'Daily Prayers',
+      'hi': 'दैनिक प्रार्थनाएँ',
+      'gu': 'દૈનિક પ્રાર્થનાઓ'
+    },
+    'spiritual-development': {
+      'en': 'Spiritual Development',
+      'hi': 'आध्यात्मिक विकास',
+      'gu': 'આધ્યાત્મિક વિકાસ'
+    },
+    'healing': {
+      'en': 'Healing',
+      'hi': 'आरोग्य',
+      'gu': 'આરોગ્ય'
+    },
+    'unity': {
+      'en': 'Unity',
+      'hi': 'एकता',
+      'gu': 'એકતા'
+    },
+    'forgiveness': {
+      'en': 'Forgiveness',
+      'hi': 'क्षमा',
+      'gu': 'ક્ષમા'
+    },
+    'assistance': {
+      'en': 'Assistance',
+      'hi': 'सहायता',
+      'gu': 'સહાયતા'
+    },
+    'departed': {
+      'en': 'For the Departed',
+      'hi': 'दिवंगत के लिए',
+      'gu': 'દિવંગત માટે'
+    },
+    'steadfastness': {
+      'en': 'Steadfastness',
+      'hi': 'दृढ़ता',
+      'gu': 'દૃઢતા'
+    },
+    'tests-difficulties': {
+      'en': 'Tests and Difficulties',
+      'hi': 'परेशानी और कठिनाई',
+      'gu': 'પરેશાની અને મુશ્કેલીઓ'
+    },
+    'children': {
+      'en': 'For Children',
+      'hi': 'बच्चों के लिए',
+      'gu': 'બાળકો માટે'
+    },
+    'youth': {
+      'en': 'For Youth',
+      'hi': 'युवाओं के लिए',
+      'gu': 'યુવાઓ માટે'
+    },
+    'infants': {
+      'en': 'For Infants',
+      'hi': 'शिशुओं के लिए',
+      'gu': 'શિશુઓ માટે'
+    },
+    'praise-gratitude': {
+      'en': 'Praise and Gratitude',
+      'hi': 'स्तुति और कृतज्ञता',
+      'gu': 'સ્તુતિ અને કૃતજ્ઞતા'
+    }
   };
 
-  // Check if we have a known tag first
-  if (knownTags[tagId]) {
-    return knownTags[tagId];
+  console.log(`Generating localized name for tag ID: "${tagId}" in language: "${langCode}"`);
+
+  // First try to get localized name
+  const localizedName = tagMappings[tagId]?.[langCode];
+  if (localizedName) {
+    console.log(`Found localized name: "${tagId}" -> "${localizedName}"`);
+    return localizedName;
   }
 
-  // Remove language suffixes (like -gu, -hi) for processing
+  // Remove language suffixes and try again
   const cleanTagId = tagId.replace(/-(gu|hi|en)$/, '');
-  
-  // Check if the clean version is known
-  if (knownTags[cleanTagId]) {
-    return knownTags[cleanTagId];
+  const cleanLocalizedName = tagMappings[cleanTagId]?.[langCode];
+  if (cleanLocalizedName) {
+    console.log(`Found localized name for clean ID: "${cleanTagId}" -> "${cleanLocalizedName}"`);
+    return cleanLocalizedName;
   }
 
-  // Generate from the tag ID structure
+  // Fallback to English if available
+  const englishName = tagMappings[tagId]?.['en'] || tagMappings[cleanTagId]?.['en'];
+  if (englishName) {
+    console.log(`Using English fallback: "${tagId}" -> "${englishName}"`);
+    return englishName;
+  }
+
+  // Final fallback to generated name
+  const fallbackName = generateBasicTagName(tagId);
+  console.log(`Using generated fallback: "${tagId}" -> "${fallbackName}"`);
+  return fallbackName;
+}
+
+// Simple function to generate basic readable names from tag IDs
+function generateBasicTagName(tagId: string): string {
   return tagId
     .replace(/-(gu|hi|en)$/, '') // Remove language suffixes
     .split(/[-_]/)
