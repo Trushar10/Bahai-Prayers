@@ -9,6 +9,17 @@ import { client } from '../lib/contentful'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 
+// Helper function to create URL-friendly slugs
+const createUrlSlug = (text: string): string => {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/[^\w\-]+/g, '') // Remove special characters except hyphens
+    .replace(/\-\-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-+/, '') // Remove hyphens from start
+    .replace(/-+$/, ''); // Remove hyphens from end
+}
+
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
@@ -87,6 +98,7 @@ export const getStaticProps: GetStaticProps = async () => {
 }
 
 export default function Home({ prayers, languages, defaultLang }: Props) {
+  const router = useRouter()
   // State to hold tag ID to name mapping
   const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
   // Get language from localStorage or default to English
@@ -105,6 +117,27 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+
+  // Handle language change with URL update
+  const handleLanguageChange = (newLang: string) => {
+    setSelectedLang(newLang)
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedLang', newLang)
+      
+      // Update URL to include language code
+      const newUrl = currentView === 'home' 
+        ? `/${newLang}` 
+        : `/${newLang}/${selectedPrayer?.fields.slug || ''}`
+      
+      window.history.pushState(
+        { view: currentView, lang: newLang }, 
+        '', 
+        newUrl
+      )
+    }
+  }
 
   // Fetch prayers and tag names together
   useEffect(() => {
@@ -175,10 +208,8 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     }
     fetchPrayersAndTags()
   }, [selectedLang])
-  const router = useRouter()
-  // ...existing code...
 
-  // Persist selected language to localStorage
+  // Persist selected language to localStorage  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('selectedLang', selectedLang)
@@ -214,12 +245,16 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       setSelectedPrayer(prayer)
       setCurrentView('prayer')
       
+      // Create URL-friendly slug
+      const prayerTitle = typeof prayer.fields.title === 'string' ? prayer.fields.title : String(prayer.fields.title)
+      const urlSlug = createUrlSlug(prayerTitle)
+      
       // Push prayer view to history for system back button support
       if (typeof window !== 'undefined') {
         window.history.pushState(
-          { view: 'prayer', prayerSlug: slug }, 
+          { view: 'prayer', prayerSlug: slug, lang: selectedLang }, 
           '', 
-          `/${selectedLang}/${slug}`
+          `/${selectedLang}/${urlSlug}`
         )
       }
     }
@@ -240,7 +275,8 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
     
     // Update browser history if this is a manual back action
     if (pushToHistory && typeof window !== 'undefined') {
-      window.history.pushState({ view: 'home' }, '', '/')
+      const homeUrl = selectedLang === 'en' ? '/' : `/${selectedLang}`
+      window.history.pushState({ view: 'home', lang: selectedLang }, '', homeUrl)
     }
     
     // Clear selected prayer after animation
@@ -334,6 +370,11 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
   // Handle browser back/forward navigation
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // Handle language changes from URL
+      if (event.state?.lang && event.state.lang !== selectedLang) {
+        setSelectedLang(event.state.lang)
+      }
+      
       if (event.state?.view === 'prayer' && event.state?.prayerSlug) {
         // Navigate to prayer view
         const prayerSlug = event.state.prayerSlug
@@ -351,9 +392,10 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
       }
     }
 
-    // Set initial history state
+    // Set initial history state with language
     if (typeof window !== 'undefined' && !window.history.state) {
-      window.history.replaceState({ view: 'home' }, '', window.location.pathname)
+      const homeUrl = selectedLang === 'en' ? '/' : `/${selectedLang}`
+      window.history.replaceState({ view: 'home', lang: selectedLang }, '', homeUrl)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -416,7 +458,7 @@ export default function Home({ prayers, languages, defaultLang }: Props) {
                 <LanguageToggle
                   languages={languages}
                   currentLang={selectedLang}
-                  onChange={setSelectedLang}
+                  onChange={handleLanguageChange}
                 />           
               </div>
             </header>
