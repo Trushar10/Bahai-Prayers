@@ -351,6 +351,9 @@ function PrayerApp() {
       const cachedPrayer = await getCachedPrayer(slug, selectedLang)
       
       if (cachedPrayer) {
+        console.log('Using cached prayer:', cachedPrayer)
+        console.log('Cached prayer body:', cachedPrayer.body)
+        
         // Convert cached prayer to PrayerEntry format
         const prayerEntry: PrayerEntry = {
           sys: cachedPrayer.sys,
@@ -361,6 +364,10 @@ function PrayerApp() {
           },
           metadata: cachedPrayer.metadata || {}
         } as unknown as PrayerEntry;
+        
+        console.log('Converted prayer entry:', prayerEntry)
+        console.log('Prayer entry body:', prayerEntry.fields.body)
+        
         return prayerEntry
       }
       
@@ -373,6 +380,10 @@ function PrayerApp() {
         
         const data = await res.json()
         const prayer = data.prayer || null
+        
+        console.log('Fetched prayer data:', prayer)
+        console.log('Prayer fields:', prayer?.fields)
+        console.log('Prayer body:', prayer?.fields?.body)
         
         if (prayer) {
           // Cache the prayer for future use
@@ -710,24 +721,33 @@ function PrayerApp() {
                         : 'Prayer'}
                     </h1>
                     <div className="content">
-                      {selectedPrayer.fields.body && typeof selectedPrayer.fields.body === 'object' ? (
-                        (() => {
-                          try {
-                            // Validate the document structure before rendering
-                            const document = selectedPrayer.fields.body as Document
-                            if (!document.content || !Array.isArray(document.content)) {
-                              console.warn('Invalid document structure:', document)
-                              return <p>Content structure is invalid.</p>
-                            }
-                            return documentToReactComponents(document, richTextOptions)
-                          } catch (error) {
-                            console.error('Error rendering prayer content:', error)
-                            return <p>Unable to display prayer content. Please try again.</p>
-                          }
-                        })()
-                      ) : (
-                        <p>No content available for this prayer.</p>
-                      )}
+                      {(() => {
+                        console.log('selectedPrayer:', selectedPrayer)
+                        console.log('selectedPrayer.fields:', selectedPrayer?.fields)
+                        console.log('selectedPrayer.fields.body:', selectedPrayer?.fields?.body)
+                        console.log('typeof body:', typeof selectedPrayer?.fields?.body)
+                        
+                        const body = selectedPrayer?.fields?.body
+                        
+                        if (!body) {
+                          console.log('No body found')
+                          return <p>No content available for this prayer.</p>
+                        }
+                        
+                        if (typeof body !== 'object') {
+                          console.log('Body is not an object, type:', typeof body)
+                          return <p>Content format is not supported.</p>
+                        }
+                        
+                        try {
+                          console.log('Attempting to render document:', body)
+                          return documentToReactComponents(body as Document, richTextOptions)
+                        } catch (error) {
+                          console.error('Error rendering prayer content:', error)
+                          console.error('Prayer content that failed:', body)
+                          return <p>Unable to display prayer content. Please try again.</p>
+                        }
+                      })()}
                     </div>
                   </article>
                 </main>
