@@ -11,6 +11,7 @@ import ThemeToggle from '../components/ThemeToggle';
 const cleanUrlSlug = (text: string): string => {
 	return text
 		.trim()
+		.toLowerCase()
 		.replace(/\s+/g, '-') // Replace spaces with hyphens
 		.replace(/\-\-+/g, '-'); // Replace multiple hyphens with single hyphen
 };

@@ -19,6 +19,7 @@ import {
 const cleanUrlSlug = (text: string): string => {
   return text
     .trim()
+    .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/\-\-+/g, '-');
 }
