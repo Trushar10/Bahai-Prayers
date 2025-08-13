@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/favicon-icon.webp",
+      "src": "/favicon-icon.png",
       "sizes": "192x192",
       "type": "image/webp"
     },
     {
-      "src": "/favicon-icon.webp",
+      "src": "/favicon-icon.png",
       "sizes": "512x512",
       "type": "image/webp"
     }
