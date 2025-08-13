@@ -2,7 +2,8 @@ import Head from 'next/head'
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
-import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
+import { documentToReactComponents, Options } from '@contentful/rich-text-react-renderer'
+import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import { 
@@ -68,6 +69,52 @@ export default function Home() {
 }
 
 function PrayerApp() {
+  // Custom rich text rendering options with error handling
+  const richTextOptions: Options = {
+    renderNode: {
+      [BLOCKS.PARAGRAPH]: (node, children) => {
+        try {
+          return <p>{children}</p>
+        } catch (error) {
+          console.error('Error rendering paragraph:', error)
+          return <p>Content unavailable</p>
+        }
+      },
+      [BLOCKS.HEADING_1]: (node, children) => {
+        try {
+          return <h1>{children}</h1>
+        } catch (error) {
+          console.error('Error rendering heading:', error)
+          return <h1>Heading unavailable</h1>
+        }
+      },
+      [BLOCKS.HEADING_2]: (node, children) => {
+        try {
+          return <h2>{children}</h2>
+        } catch (error) {
+          console.error('Error rendering heading:', error)
+          return <h2>Heading unavailable</h2>
+        }
+      },
+      [BLOCKS.UL_LIST]: (node, children) => {
+        try {
+          return <ul>{children}</ul>
+        } catch (error) {
+          console.error('Error rendering list:', error)
+          return <ul><li>List content unavailable</li></ul>
+        }
+      },
+      [BLOCKS.LIST_ITEM]: (node, children) => {
+        try {
+          return <li>{children}</li>
+        } catch (error) {
+          console.error('Error rendering list item:', error)
+          return <li>Item unavailable</li>
+        }
+      }
+    }
+  }
+
   const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
   const [selectedLang, setSelectedLang] = useState('en')
   const [filteredPrayers, setFilteredPrayers] = useState<Array<PrayerEntry>>([])
@@ -663,7 +710,24 @@ function PrayerApp() {
                         : 'Prayer'}
                     </h1>
                     <div className="content">
-                      {documentToReactComponents(selectedPrayer.fields.body as Document)}
+                      {selectedPrayer.fields.body && typeof selectedPrayer.fields.body === 'object' ? (
+                        (() => {
+                          try {
+                            // Validate the document structure before rendering
+                            const document = selectedPrayer.fields.body as Document
+                            if (!document.content || !Array.isArray(document.content)) {
+                              console.warn('Invalid document structure:', document)
+                              return <p>Content structure is invalid.</p>
+                            }
+                            return documentToReactComponents(document, richTextOptions)
+                          } catch (error) {
+                            console.error('Error rendering prayer content:', error)
+                            return <p>Unable to display prayer content. Please try again.</p>
+                          }
+                        })()
+                      ) : (
+                        <p>No content available for this prayer.</p>
+                      )}
                     </div>
                   </article>
                 </main>
