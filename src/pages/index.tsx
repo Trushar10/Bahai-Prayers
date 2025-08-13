@@ -136,18 +136,19 @@ function PrayerApp() {
   useEffect(() => {
     // Only initialize cache in browser environment
     if (typeof window === 'undefined') {
-      console.log('Server-side rendering, skipping cache initialization')
+      console.log('🖥️ Server-side rendering, skipping cache initialization')
       return
     }
 
     const initCache = async () => {
       try {
+        console.log('🔧 Initializing prayer cache...')
         await prayerCache.init()
         const stats = await getCacheStats()
         setCacheStats(stats)
-        console.log('Cache initialized successfully')
+        console.log('✅ Cache initialized successfully:', stats)
       } catch (error) {
-        console.warn('Cache initialization failed, continuing without cache:', error)
+        console.warn('❌ Cache initialization failed, continuing without cache:', error)
         // App will continue to work without cache
         setCacheStats({ totalPrayers: 0, languages: [], lastSync: null, size: 0 })
       }
@@ -158,17 +159,22 @@ function PrayerApp() {
   // Fetch prayers and tag names together with caching
   useEffect(() => {
     async function fetchPrayersAndTags() {
+      console.log('🔍 Starting prayer fetch for language:', selectedLang)
+      
       try {
         // First, try to get from cache
         let cachedPrayers: CachedPrayer[] = []
         try {
+          console.log('📦 Checking cache for language:', selectedLang)
           cachedPrayers = await getCachedPrayersByLanguage(selectedLang) || []
+          console.log('📦 Found cached prayers:', cachedPrayers.length)
         } catch (cacheError) {
-          console.warn('Cache access failed:', cacheError)
+          console.warn('❌ Cache access failed:', cacheError)
           cachedPrayers = []
         }
         
         if (cachedPrayers && Array.isArray(cachedPrayers) && cachedPrayers.length > 0) {
+          console.log('✅ Using cached data immediately - converting to PrayerEntry format')
           // Use cached data immediately - convert cached data to PrayerEntry format
           const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
             return {
@@ -187,16 +193,21 @@ function PrayerApp() {
           // Build tag mapping from cached data
           buildTagMapping(prayers)
           
-          console.log('Loaded prayers from cache:', prayers.length)
+          console.log('✅ Loaded prayers from cache:', prayers.length)
+        } else {
+          console.log('📭 No cached prayers found, will need to fetch from network')
         }
 
         // Check network connectivity before attempting fresh fetch
         const isOnline = navigator.onLine
+        console.log('🌐 Network status:', isOnline ? 'ONLINE' : 'OFFLINE')
+        
         const needsRefresh = cachedPrayers.length === 0 || await prayerCache.needsRefresh()
+        console.log('🔄 Needs refresh:', needsRefresh)
         
         if (needsRefresh && isOnline) {
           try {
-            console.log('Attempting to fetch fresh prayers...')
+            console.log('🌐 Attempting to fetch fresh prayers from API...')
             const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             
             if (!res.ok) {
@@ -207,10 +218,13 @@ function PrayerApp() {
             
             if (data.items && Array.isArray(data.items)) {
               const freshPrayers: PrayerEntry[] = data.items
+              console.log('🌐 Received fresh prayers from API:', freshPrayers.length)
               setFilteredPrayers(freshPrayers)
               
               // Cache the fresh data
+              console.log('💾 Caching fresh prayers...')
               await cachePrayers(freshPrayers, selectedLang)
+              console.log('✅ Prayers cached successfully')
               
               // Update cache metadata
               await prayerCache.updateMetadata({
@@ -222,9 +236,12 @@ function PrayerApp() {
               // Update cache stats
               const stats = await getCacheStats()
               setCacheStats(stats)
+              console.log('📊 Updated cache stats:', stats)
               
               // Build tag mapping from fresh data
               buildTagMapping(freshPrayers, data.tags)
+            } else {
+              console.warn('⚠️ API response missing items array:', data)
             }
           } catch (networkError) {
             console.warn('Network request failed, using cached data:', networkError)
@@ -343,6 +360,44 @@ function PrayerApp() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('selectedLang', selectedLang)
+    }
+  }, [selectedLang])
+
+  // Debug function - expose to window for manual testing
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // @ts-ignore
+      window.debugPrayerCache = {
+        checkCache: async () => {
+          const stats = await getCacheStats()
+          console.log('📊 Cache Stats:', stats)
+          const cached = await getCachedPrayersByLanguage(selectedLang)
+          console.log('📦 Cached prayers for', selectedLang, ':', cached)
+          return { stats, cached }
+        },
+        clearCache: async () => {
+          await prayerCache.clearCache()
+          console.log('🗑️ Cache cleared')
+        },
+        testCache: async () => {
+          console.log('🧪 Testing cache functionality...')
+          // Test if we can write and read from cache
+          const testPrayer = {
+            sys: { id: 'test-id' },
+            fields: {
+              title: 'Test Prayer',
+              slug: 'test-prayer',
+              body: 'Test content'
+            },
+            metadata: {}
+          } as unknown as PrayerEntry
+          
+          await cachePrayer(testPrayer, selectedLang)
+          const retrieved = await getCachedPrayer('test-prayer', selectedLang)
+          console.log('🧪 Test result:', retrieved)
+          return retrieved
+        }
+      }
     }
   }, [selectedLang])
 
