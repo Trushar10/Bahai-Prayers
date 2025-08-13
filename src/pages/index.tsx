@@ -727,15 +727,27 @@ function PrayerApp() {
                         console.log('selectedPrayer.fields.body:', selectedPrayer?.fields?.body)
                         console.log('typeof body:', typeof selectedPrayer?.fields?.body)
                         
-                        const body = selectedPrayer?.fields?.body
+                        let body = selectedPrayer?.fields?.body
                         
                         if (!body) {
                           console.log('No body found')
                           return <p>No content available for this prayer.</p>
                         }
                         
-                        if (typeof body !== 'object') {
-                          console.log('Body is not an object, type:', typeof body)
+                        // Handle both string (from cache) and object (from API) formats
+                        if (typeof body === 'string') {
+                          try {
+                            console.log('Body is string, parsing JSON...')
+                            body = JSON.parse(body)
+                            console.log('Parsed body:', body)
+                          } catch (parseError) {
+                            console.error('Failed to parse body JSON:', parseError)
+                            return <p>Content format is corrupted.</p>
+                          }
+                        }
+                        
+                        if (typeof body !== 'object' || !body) {
+                          console.log('Body is not an object after parsing, type:', typeof body)
                           return <p>Content format is not supported.</p>
                         }
                         
