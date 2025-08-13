@@ -72,7 +72,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 				matchingPrayer = prayer as PrayerEntry;
 				break;
 			}
-		} catch (error) {
+		} catch {
 			// Continue to next language if this one fails
 			continue;
 		}
