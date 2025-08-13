@@ -124,6 +124,7 @@ function PrayerApp() {
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
   const [cacheStats, setCacheStats] = useState<{ totalPrayers: number; languages: string[]; lastSync: Date | null; size: number }>({ 
     totalPrayers: 0, 
     languages: [], 
@@ -373,7 +374,26 @@ function PrayerApp() {
         return prayerEntry
       }
       
-      // If not in cache, fetch from API
+      // If not in cache, try to find in current filteredPrayers (for offline scenarios)
+      const prayerFromList = filteredPrayers.find(p => {
+        const prayerSlug = typeof p.fields.slug === 'string' ? p.fields.slug : String(p.fields.slug)
+        return cleanUrlSlug(prayerSlug) === cleanUrlSlug(slug)
+      })
+      
+      if (prayerFromList) {
+        console.log('Using prayer from current list:', prayerFromList)
+        
+        // Cache it for future use
+        try {
+          await cachePrayer(prayerFromList, selectedLang)
+        } catch (cacheError) {
+          console.warn('Failed to cache prayer from list:', cacheError)
+        }
+        
+        return prayerFromList
+      }
+      
+      // If not in current list, fetch from API
       try {
         const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
         if (!res.ok) {
@@ -420,6 +440,17 @@ function PrayerApp() {
     } catch (error) {
       console.error('Error fetching prayer:', error)
       
+      // Final fallback: look in current filteredPrayers again
+      const prayerFromList = filteredPrayers.find(p => {
+        const prayerSlug = typeof p.fields.slug === 'string' ? p.fields.slug : String(p.fields.slug)
+        return cleanUrlSlug(prayerSlug) === cleanUrlSlug(slug)
+      })
+      
+      if (prayerFromList) {
+        console.log('Using prayer from list as final fallback:', prayerFromList)
+        return prayerFromList
+      }
+      
       // Fallback to cache if network fails
       const cachedPrayer = await getCachedPrayer(slug, selectedLang)
       if (cachedPrayer) {
@@ -437,7 +468,7 @@ function PrayerApp() {
       
       return null
     }
-  }, [selectedLang])
+  }, [selectedLang, filteredPrayers])
 
   const handleBack = useCallback((pushToHistory: boolean = true) => {
     if (isAnimating) return
@@ -492,21 +523,35 @@ function PrayerApp() {
   const handleClick = async (slug: string) => {
     if (isAnimating) return
     setIsAnimating(true)
-    const prayer = await fetchPrayerContent(slug)
-    if (prayer) {
-      setSelectedPrayer(prayer)
-      setCurrentView('prayer')
-      const originalSlug = typeof prayer.fields.slug === 'string' ? prayer.fields.slug : String(prayer.fields.slug)
-      const urlSlug = cleanUrlSlug(originalSlug)
-      window.history.pushState(
-        { view: 'prayer', prayerSlug: slug, lang: selectedLang }, 
-        '', 
-        `/${urlSlug}`
-      )
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'instant' })
-      }, 100)
+    setErrorMessage('') // Clear any previous errors
+    
+    try {
+      const prayer = await fetchPrayerContent(slug)
+      if (prayer) {
+        setSelectedPrayer(prayer)
+        setCurrentView('prayer')
+        const originalSlug = typeof prayer.fields.slug === 'string' ? prayer.fields.slug : String(prayer.fields.slug)
+        const urlSlug = cleanUrlSlug(originalSlug)
+        window.history.pushState(
+          { view: 'prayer', prayerSlug: slug, lang: selectedLang }, 
+          '', 
+          `/${urlSlug}`
+        )
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'instant' })
+        }, 100)
+      } else {
+        // Show error feedback to user
+        console.error('Prayer not found:', slug)
+        setErrorMessage('This prayer is not available offline. Please connect to the internet and try again.')
+        setTimeout(() => setErrorMessage(''), 5000) // Clear after 5 seconds
+      }
+    } catch (error) {
+      console.error('Error loading prayer:', error)
+      setErrorMessage('Failed to load prayer. Please check your connection and try again.')
+      setTimeout(() => setErrorMessage(''), 5000) // Clear after 5 seconds
     }
+    
     setTimeout(() => setIsAnimating(false), 300)
   }
 
@@ -645,6 +690,20 @@ function PrayerApp() {
                 </div>           
               </div>
             </header>
+
+            {errorMessage && (
+              <div className="error-toast" style={{ 
+                padding: '12px 24px', 
+                background: '#fee2e2', 
+                color: '#dc2626', 
+                borderLeft: '4px solid #ef4444',
+                margin: '0 24px 16px',
+                borderRadius: '4px',
+                fontSize: '14px'
+              }}>
+                {errorMessage}
+              </div>
+            )}
 
             <main className="homepage">
               {hasError ? (
