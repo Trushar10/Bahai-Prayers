@@ -11,7 +11,8 @@ import {
   cachePrayers, 
   cachePrayer, 
   getCacheStats, 
-  prayerCache
+  prayerCache,
+  CachedPrayer
 } from '../lib/prayerCache'
 
 const cleanUrlSlug = (text: string): string => {
@@ -48,6 +49,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [hasError, setHasError] = useState(false)
   const [cacheStats, setCacheStats] = useState<{ totalPrayers: number; languages: string[]; lastSync: Date | null; size: number }>({ 
     totalPrayers: 0, 
     languages: [], 
@@ -83,9 +85,15 @@ export default function Home() {
     async function fetchPrayersAndTags() {
       try {
         // First, try to get from cache
-        const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
+        let cachedPrayers: CachedPrayer[] = []
+        try {
+          cachedPrayers = await getCachedPrayersByLanguage(selectedLang) || []
+        } catch (cacheError) {
+          console.warn('Cache access failed:', cacheError)
+          cachedPrayers = []
+        }
         
-        if (cachedPrayers.length > 0) {
+        if (cachedPrayers && Array.isArray(cachedPrayers) && cachedPrayers.length > 0) {
           // Use cached data immediately - convert cached data to PrayerEntry format
           const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
             return {
@@ -153,7 +161,8 @@ export default function Home() {
             const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             const data = await res.json()
             if (data.tags) {
-              buildTagMapping(filteredPrayers, data.tags)
+              // Use current filtered prayers for tag mapping
+              buildTagMapping([], data.tags)
             }
           } catch (fetchError) {
             console.warn('Failed to fetch fresh tag data, using cached prayers only', fetchError)
@@ -163,8 +172,15 @@ export default function Home() {
         console.error('Error fetching prayers:', error)
         
         // Fallback to cached data if network fails
-        const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
-        if (cachedPrayers.length > 0) {
+        let cachedPrayers: CachedPrayer[] = []
+        try {
+          cachedPrayers = await getCachedPrayersByLanguage(selectedLang) || []
+        } catch (cacheError) {
+          console.warn('Cache access failed during fallback:', cacheError)
+          cachedPrayers = []
+        }
+        
+        if (cachedPrayers && Array.isArray(cachedPrayers) && cachedPrayers.length > 0) {
           const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
             return {
               sys: cached.sys,
@@ -179,6 +195,11 @@ export default function Home() {
           
           setFilteredPrayers(prayers)
           buildTagMapping(prayers)
+        } else {
+          // Both network and cache failed
+          console.error('No prayers available from network or cache')
+          setHasError(true)
+          setFilteredPrayers([])
         }
       } finally {
         // No longer need loading state with caching
@@ -524,11 +545,30 @@ export default function Home() {
             </header>
 
             <main className="homepage">
-              {orderedSections.map((sectionName) => (
-                <section key={sectionName} className="prayer-section">
-                  <h2 className="section-title">{sectionName}</h2>
-                  <div className="post-list">
-                    {groupedPrayers[sectionName].map((p: PrayerEntry) => (
+              {hasError ? (
+                <div className="error-message" style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                  <p>Unable to load prayers. Please check your internet connection and try again.</p>
+                  <button onClick={() => {
+                    setHasError(false)
+                    window.location.reload()
+                  }} style={{ 
+                    padding: '0.5rem 1rem', 
+                    backgroundColor: '#317EFB', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    marginTop: '1rem'
+                  }}>
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                orderedSections.map((sectionName) => (
+                  <section key={sectionName} className="prayer-section">
+                    <h2 className="section-title">{sectionName}</h2>
+                    <div className="post-list">
+                      {(groupedPrayers[sectionName] || []).map((p: PrayerEntry) => (
                       <div
                         key={p.sys.id}
                         className="post-item"
@@ -550,7 +590,8 @@ export default function Home() {
                     ))}
                   </div>
                 </section>
-              ))}
+              ))
+              )}
             </main>
             <footer className="footer">
               <p>&copy; {new Date().getFullYear()} Prayer App. All rights reserved.</p>
