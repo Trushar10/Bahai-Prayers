@@ -21,6 +21,14 @@ const cleanUrlSlug = (text: string): string => {
     .replace(/\-\-+/g, '-');
 }
 
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
 type PrayerSkeleton = EntrySkeletonType<{
   title: EntryFieldTypes.Text
   slug: EntryFieldTypes.Text
@@ -92,29 +100,43 @@ export default function Home() {
         const needsRefresh = cachedPrayers.length === 0 || await prayerCache.needsRefresh()
         
         if (needsRefresh) {
-          const res = await fetch(`/api/prayers?lang=${selectedLang}`)
-          const data = await res.json()
-          
-          if (data.items && Array.isArray(data.items)) {
-            const freshPrayers: PrayerEntry[] = data.items
-            setFilteredPrayers(freshPrayers)
+          try {
+            const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             
-            // Cache the fresh data
-            await cachePrayers(freshPrayers, selectedLang)
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+            }
             
-            // Update cache metadata
-            await prayerCache.updateMetadata({
-              lastFullSync: Date.now(),
-              languages: [selectedLang],
-              totalPrayers: freshPrayers.length
-            })
+            const data = await res.json()
             
-            // Update cache stats
-            const stats = await getCacheStats()
-            setCacheStats(stats)
-            
-            // Build tag mapping from fresh data
-            buildTagMapping(freshPrayers, data.tags)
+            if (data.items && Array.isArray(data.items)) {
+              const freshPrayers: PrayerEntry[] = data.items
+              setFilteredPrayers(freshPrayers)
+              
+              // Cache the fresh data
+              await cachePrayers(freshPrayers, selectedLang)
+              
+              // Update cache metadata
+              await prayerCache.updateMetadata({
+                lastFullSync: Date.now(),
+                languages: [selectedLang],
+                totalPrayers: freshPrayers.length
+              })
+              
+              // Update cache stats
+              const stats = await getCacheStats()
+              setCacheStats(stats)
+              
+              // Build tag mapping from fresh data
+              buildTagMapping(freshPrayers, data.tags)
+            }
+          } catch (networkError) {
+            console.warn('Network request failed, using cached data:', networkError)
+            // If we have cached data, continue using it
+            if (cachedPrayers.length === 0) {
+              // No cached data and network failed - this is a problem
+              console.error('No cached data available and network failed')
+            }
           }
         } else if (cachedPrayers.length > 0) {
           // If we used cache and don't need refresh, still get tag data from API
@@ -241,24 +263,45 @@ export default function Home() {
       }
       
       // If not in cache, fetch from API
-      const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
-      if (!res.ok) {
-        throw new Error('Failed to fetch prayer')
-      }
-      
-      const data = await res.json()
-      const prayer = data.prayer || null
-      
-      if (prayer) {
-        // Cache the prayer for future use
-        await cachePrayer(prayer, selectedLang)
+      try {
+        const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+        }
         
-        // Update cache stats
-        const stats = await getCacheStats()
-        setCacheStats(stats)
+        const data = await res.json()
+        const prayer = data.prayer || null
+        
+        if (prayer) {
+          // Cache the prayer for future use
+          await cachePrayer(prayer, selectedLang)
+          
+          // Update cache stats
+          const stats = await getCacheStats()
+          setCacheStats(stats)
+        }
+        
+        return prayer
+      } catch (networkError) {
+        console.warn('Failed to fetch prayer from API, checking cache again:', networkError)
+        
+        // Try cache one more time in case it was just added
+        const cachedPrayer = await getCachedPrayer(slug, selectedLang)
+        if (cachedPrayer) {
+          const prayerEntry: PrayerEntry = {
+            sys: cachedPrayer.sys,
+            fields: {
+              title: cachedPrayer.title,
+              slug: cachedPrayer.slug,
+              body: cachedPrayer.body
+            },
+            metadata: cachedPrayer.metadata || {}
+          } as unknown as PrayerEntry;
+          return prayerEntry
+        }
+        
+        throw networkError
       }
-      
-      return prayer
     } catch (error) {
       console.error('Error fetching prayer:', error)
       
@@ -461,9 +504,10 @@ export default function Home() {
                     onChange={setSelectedLang}
                   />
                   {cacheStats.totalPrayers > 0 && (
-                    <div className="cache-status" title={`Cached: ${cacheStats.totalPrayers} prayers in ${cacheStats.languages.length} languages${cacheStats.lastSync ? `. Last sync: ${new Date(cacheStats.lastSync).toLocaleString()}` : ''}`}>
+                    <div className="cache-status" title={`Cached: ${cacheStats.totalPrayers} prayers in ${cacheStats.languages.length} languages. Size: ${formatBytes(cacheStats.size)}${cacheStats.lastSync ? `. Last sync: ${new Date(cacheStats.lastSync).toLocaleString()}` : ''}`}>
                       <span className="cache-icon">💾</span>
                       <span className="cache-count">{cacheStats.totalPrayers}</span>
+                      <span className="cache-size">({formatBytes(cacheStats.size)})</span>
                     </div>
                   )}
                 </div>           

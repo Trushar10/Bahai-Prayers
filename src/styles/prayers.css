@@ -96,6 +96,7 @@ body {
 }
 
 .cache-status {
+	margin-right: 5rem;
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -119,6 +120,13 @@ body {
 .cache-count {
 	font-weight: 500;
 	font-size: 11px;
+}
+
+.cache-size {
+	font-weight: 400;
+	font-size: 10px;
+	opacity: 0.8;
+	margin-left: 2px;
 }
 
 .back-btn {

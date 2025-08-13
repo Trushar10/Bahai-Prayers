@@ -280,6 +280,9 @@ class PrayerCacheManager {
     await this.ensureInit();
     if (!this.db) return { totalPrayers: 0, languages: [], lastSync: null, size: 0 };
 
+    // Get actual database size first
+    const actualSize = await this.getDatabaseSize();
+
     return new Promise((resolve) => {
       const transaction = this.db!.transaction(['prayers', 'metadata'], 'readonly');
       const prayersStore = transaction.objectStore('prayers');
@@ -309,20 +312,49 @@ class PrayerCacheManager {
             totalPrayers,
             languages: metadata?.languages || [],
             lastSync: metadata?.lastFullSync ? new Date(metadata.lastFullSync) : null,
-            size: this.estimateSize(totalPrayers)
+            size: actualSize
           });
         }
       };
 
       countRequest.onerror = metadataRequest.onerror = () => {
-        resolve({ totalPrayers: 0, languages: [], lastSync: null, size: 0 });
+        resolve({ totalPrayers: 0, languages: [], lastSync: null, size: actualSize });
       };
     });
   }
 
   private estimateSize(prayerCount: number): number {
-    // Rough estimate: each prayer ~5KB
-    return prayerCount * 5 * 1024;
+    // More accurate estimate: each prayer ~8KB (text content + metadata)
+    return prayerCount * 8 * 1024;
+  }
+
+  // Get actual database size
+  async getDatabaseSize(): Promise<number> {
+    await this.ensureInit();
+    if (!this.db) return 0;
+
+    return new Promise((resolve) => {
+      const transaction = this.db!.transaction(['prayers'], 'readonly');
+      const store = transaction.objectStore('prayers');
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const prayers = request.result as CachedPrayer[];
+        let totalSize = 0;
+        
+        prayers.forEach(prayer => {
+          // Calculate size of each prayer object in bytes
+          const jsonString = JSON.stringify(prayer);
+          totalSize += new Blob([jsonString]).size;
+        });
+
+        resolve(totalSize);
+      };
+
+      request.onerror = () => {
+        resolve(this.estimateSize(0));
+      };
+    });
   }
 }
 
