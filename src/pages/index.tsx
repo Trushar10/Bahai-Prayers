@@ -40,7 +40,6 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [cacheStats, setCacheStats] = useState<{ totalPrayers: number; languages: string[]; lastSync: Date | null; size: number }>({ 
     totalPrayers: 0, 
     languages: [], 
@@ -65,23 +64,23 @@ export default function Home() {
   // Fetch prayers and tag names together with caching
   useEffect(() => {
     async function fetchPrayersAndTags() {
-      setIsLoading(true)
       try {
         // First, try to get from cache
         const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
         
         if (cachedPrayers.length > 0) {
-          // Use cached data immediately
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const prayers: PrayerEntry[] = cachedPrayers.map(cached => ({
-            sys: cached.sys as any,
-            fields: {
-              title: cached.title,
-              slug: cached.slug,
-              body: cached.body as any
-            },
-            metadata: (cached.metadata || {}) as any
-          })) as PrayerEntry[]
+          // Use cached data immediately - convert cached data to PrayerEntry format
+          const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
+            return {
+              sys: cached.sys,
+              fields: {
+                title: cached.title,
+                slug: cached.slug,
+                body: cached.body
+              },
+              metadata: cached.metadata || {}
+            } as unknown as PrayerEntry;
+          });
           
           setFilteredPrayers(prayers)
           
@@ -125,8 +124,8 @@ export default function Home() {
             if (data.tags) {
               buildTagMapping(filteredPrayers, data.tags)
             }
-          } catch (error) {
-            console.warn('Failed to fetch fresh tag data, using cached prayers only')
+          } catch (fetchError) {
+            console.warn('Failed to fetch fresh tag data, using cached prayers only', fetchError)
           }
         }
       } catch (error) {
@@ -135,26 +134,27 @@ export default function Home() {
         // Fallback to cached data if network fails
         const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
         if (cachedPrayers.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const prayers: PrayerEntry[] = cachedPrayers.map(cached => ({
-            sys: cached.sys as any,
-            fields: {
-              title: cached.title,
-              slug: cached.slug,
-              body: cached.body as any
-            },
-            metadata: (cached.metadata || {}) as any
-          })) as PrayerEntry[]
+          const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
+            return {
+              sys: cached.sys,
+              fields: {
+                title: cached.title,
+                slug: cached.slug,
+                body: cached.body
+              },
+              metadata: cached.metadata || {}
+            } as unknown as PrayerEntry;
+          });
           
           setFilteredPrayers(prayers)
           buildTagMapping(prayers)
         }
       } finally {
-        setIsLoading(false)
+        // No longer need loading state with caching
       }
     }
 
-    function buildTagMapping(prayers: PrayerEntry[], apiTags?: any[]) {
+    function buildTagMapping(prayers: PrayerEntry[], apiTags?: Array<{ sys: { id: string }; name?: string }>) {
       const mapping: { [id: string]: string } = {}
       
       // First, add mappings from API response if available
@@ -228,16 +228,15 @@ export default function Home() {
       
       if (cachedPrayer) {
         // Convert cached prayer to PrayerEntry format
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const prayerEntry: PrayerEntry = {
-          sys: cachedPrayer.sys as any,
+          sys: cachedPrayer.sys,
           fields: {
             title: cachedPrayer.title,
             slug: cachedPrayer.slug,
-            body: cachedPrayer.body as any
+            body: cachedPrayer.body
           },
-          metadata: (cachedPrayer.metadata || {}) as any
-        }
+          metadata: cachedPrayer.metadata || {}
+        } as unknown as PrayerEntry;
         return prayerEntry
       }
       
@@ -266,16 +265,15 @@ export default function Home() {
       // Fallback to cache if network fails
       const cachedPrayer = await getCachedPrayer(slug, selectedLang)
       if (cachedPrayer) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const prayerEntry: PrayerEntry = {
-          sys: cachedPrayer.sys as any,
+          sys: cachedPrayer.sys,
           fields: {
             title: cachedPrayer.title,
             slug: cachedPrayer.slug,
-            body: cachedPrayer.body as any
+            body: cachedPrayer.body
           },
-          metadata: (cachedPrayer.metadata || {}) as any
-        }
+          metadata: cachedPrayer.metadata || {}
+        } as unknown as PrayerEntry;
         return prayerEntry
       }
       
