@@ -6,6 +6,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Document } from '@contentful/rich-text-types';
 import ThemeToggle from '../components/ThemeToggle';
+import OfflineIndicator from '../components/OfflineIndicator';
 
 // Helper function to clean URL slugs (replace spaces with hyphens)
 const cleanUrlSlug = (text: string): string => {
@@ -139,6 +140,8 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 				<link rel="manifest" href="/manifest.json" />
 				<link rel="icon" href="/favicon.webp" />
 			</Head>
+
+			<OfflineIndicator showOnlineMessage={true} />
 
 			<div className="container show-single-post">
 				<header className="header">

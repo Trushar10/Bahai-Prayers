@@ -170,9 +170,18 @@ export function formatCacheSize(bytes: number): string {
 }
 
 export function useOnlineStatus() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(() => {
+    // Handle SSR by returning true initially, then updating on client
+    if (typeof window === 'undefined') return true;
+    return navigator.onLine;
+  });
 
   useEffect(() => {
+    // Set the actual online status once mounted on client
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+    }
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 

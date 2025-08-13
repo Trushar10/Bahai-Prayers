@@ -6,6 +6,7 @@ import { documentToReactComponents, Options } from '@contentful/rich-text-react-
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
+import OfflineIndicator from '../components/OfflineIndicator'
 import { 
   getCachedPrayer, 
   getCachedPrayersByLanguage, 
@@ -618,6 +619,8 @@ function PrayerApp() {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
       </Head>
+
+      <OfflineIndicator showOnlineMessage={true} />
 
       <div className="container">
         <div className={`page-container ${currentView === 'prayer' ? 'slide-left' : ''}`}>
