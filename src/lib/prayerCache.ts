@@ -30,8 +30,8 @@ export interface CacheMetadata {
 }
 
 class PrayerCacheManager {
-  private dbName = 'PrayersDB';
-  private version = 2;
+  private dbName = 'PrayerCache';
+  private version = 3; // Increment version to force upgrade
   private db: IDBDatabase | null = null;
 
   // Initialize IndexedDB
@@ -68,19 +68,41 @@ class PrayerCacheManager {
         request.onupgradeneeded = (event) => {
           try {
             const db = (event.target as IDBOpenDBRequest).result;
+            const transaction = (event.target as IDBOpenDBRequest).transaction;
             
-            // Create prayers store
+            console.log('Upgrading IndexedDB from version', event.oldVersion, 'to', event.newVersion);
+            
+            // Handle prayers store
+            let prayersStore: IDBObjectStore;
             if (!db.objectStoreNames.contains('prayers')) {
-              const prayersStore = db.createObjectStore('prayers', { keyPath: 'id' });
+              console.log('Creating prayers object store');
+              prayersStore = db.createObjectStore('prayers', { keyPath: 'id' });
+            } else {
+              console.log('Using existing prayers object store');
+              prayersStore = transaction!.objectStore('prayers');
+            }
+            
+            // Ensure all required indexes exist
+            if (!prayersStore.indexNames.contains('language')) {
+              console.log('Creating language index');
               prayersStore.createIndex('language', 'language', { unique: false });
+            }
+            if (!prayersStore.indexNames.contains('slug')) {
+              console.log('Creating slug index');
               prayersStore.createIndex('slug', 'slug', { unique: false });
+            }
+            if (!prayersStore.indexNames.contains('cachedAt')) {
+              console.log('Creating cachedAt index');
               prayersStore.createIndex('cachedAt', 'cachedAt', { unique: false });
             }
 
-            // Create metadata store
+            // Handle metadata store
             if (!db.objectStoreNames.contains('metadata')) {
+              console.log('Creating metadata object store');
               db.createObjectStore('metadata', { keyPath: 'key' });
             }
+            
+            console.log('IndexedDB upgrade completed successfully');
           } catch (upgradeError) {
             console.error('Error during IndexedDB upgrade:', upgradeError);
             resolve(); // Continue without cache
@@ -141,19 +163,43 @@ class PrayerCacheManager {
     }
 
     return new Promise((resolve) => {
-      const transaction = this.db!.transaction(['prayers'], 'readonly');
-      const store = transaction.objectStore('prayers');
-      const index = store.index('language');
-      const request = index.getAll(language);
+      try {
+        const transaction = this.db!.transaction(['prayers'], 'readonly');
+        const store = transaction.objectStore('prayers');
+        
+        // Check if the language index exists
+        if (store.indexNames.contains('language')) {
+          const index = store.index('language');
+          const request = index.getAll(language);
 
-      request.onsuccess = () => {
-        resolve(request.result as CachedPrayer[]);
-      };
+          request.onsuccess = () => {
+            resolve(request.result as CachedPrayer[]);
+          };
 
-      request.onerror = () => {
-        console.error('Error getting cached prayers by language:', request.error);
+          request.onerror = () => {
+            console.error('Error getting cached prayers by language index:', request.error);
+            resolve([]);
+          };
+        } else {
+          // Fallback: scan all records if index doesn't exist
+          console.warn('Language index not found, falling back to full scan');
+          const request = store.getAll();
+          
+          request.onsuccess = () => {
+            const allPrayers = request.result as CachedPrayer[];
+            const filteredPrayers = allPrayers.filter(prayer => prayer.language === language);
+            resolve(filteredPrayers);
+          };
+
+          request.onerror = () => {
+            console.error('Error getting all cached prayers for fallback:', request.error);
+            resolve([]);
+          };
+        }
+      } catch (error) {
+        console.error('Error in getCachedPrayersByLanguage:', error);
         resolve([]);
-      };
+      }
     });
   }
 
