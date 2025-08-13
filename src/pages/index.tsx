@@ -269,7 +269,7 @@ export default function Home() {
         <title>Prayers</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/profile-circle.webp" />
+        <link rel="icon" href="/favicon.webp" />
         <meta name="theme-color" content="#317EFB" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

@@ -136,7 +136,7 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 				/>
 				<meta name="theme-color" content="#317EFB" />
 				<link rel="manifest" href="/manifest.json" />
-				<link rel="icon" href="/favicon-icon.png" />
+				<link rel="icon" href="/favicon.webp" />
 			</Head>
 
 			<div className="container show-single-post">
