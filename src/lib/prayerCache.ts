@@ -48,7 +48,7 @@ class PrayerCacheManager {
       return;
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       try {
         const request = indexedDB.open(this.dbName, this.version);
 

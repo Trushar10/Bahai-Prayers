@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { Document } from '@contentful/rich-text-types'
 import { documentToReactComponents, Options } from '@contentful/rich-text-react-renderer'
-import { BLOCKS, INLINES } from '@contentful/rich-text-types'
+import { BLOCKS } from '@contentful/rich-text-types'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import OfflineIndicator from '../components/OfflineIndicator'
@@ -366,7 +366,7 @@ function PrayerApp() {
   // Debug function - expose to window for manual testing
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // @ts-ignore
+      // @ts-expect-error - Adding debug functions to window for testing
       window.debugPrayerCache = {
         checkCache: async () => {
           const stats = await getCacheStats()
