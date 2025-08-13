@@ -43,6 +43,31 @@ interface GroupedPrayers {
 }
 
 export default function Home() {
+  try {
+    return <PrayerApp />
+  } catch (error) {
+    console.error('Critical error in Prayer App:', error)
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+        <h1>Prayer App</h1>
+        <p>Something went wrong. Please refresh the page.</p>
+        <button onClick={() => window.location.reload()} style={{ 
+          padding: '0.5rem 1rem', 
+          backgroundColor: '#317EFB', 
+          color: 'white', 
+          border: 'none', 
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginTop: '1rem'
+        }}>
+          Refresh Page
+        </button>
+      </div>
+    )
+  }
+}
+
+function PrayerApp() {
   const [tagNames, setTagNames] = useState<{ [id: string]: string }>({})
   const [selectedLang, setSelectedLang] = useState('en')
   const [filteredPrayers, setFilteredPrayers] = useState<Array<PrayerEntry>>([])
@@ -461,16 +486,31 @@ export default function Home() {
   }
 
   const groupedPrayers: GroupedPrayers = useMemo(() => {
-    if (Object.keys(tagNames).length === 0) {
+    // Add safety checks for all dependencies
+    if (!tagNames || typeof tagNames !== 'object' || Object.keys(tagNames).length === 0) {
       return {};
     }
+    
+    if (!filteredPrayers || !Array.isArray(filteredPrayers)) {
+      return {};
+    }
+    
     return filteredPrayers.reduce((acc, prayer) => {
+      // Additional safety checks for each prayer
+      if (!prayer || !prayer.metadata) {
+        return acc;
+      }
+      
       const tags = prayer.metadata?.tags || []
-      if (tags.length === 0) {
+      if (!Array.isArray(tags) || tags.length === 0) {
         if (!acc['Other']) acc['Other'] = []
         acc['Other'].push(prayer)
       } else {
         tags.forEach((tag) => {
+          if (!tag || !tag.sys) {
+            return; // Skip invalid tags
+          }
+          
           const tagId = tag.sys?.id || 'Other'
           let displayName = tagNames[tagId]
           if (!displayName || displayName === tagId) {
@@ -503,7 +543,7 @@ export default function Home() {
     general,
     ...rest,
     other
-  ].filter((name): name is string => typeof name === 'string' && Boolean(name))
+  ].filter((name): name is string => typeof name === 'string' && Boolean(name) && name.trim().length > 0)
 
   return (
     <>
@@ -564,7 +604,7 @@ export default function Home() {
                   </button>
                 </div>
               ) : (
-                orderedSections.map((sectionName) => (
+                (orderedSections && Array.isArray(orderedSections) ? orderedSections : []).map((sectionName) => (
                   <section key={sectionName} className="prayer-section">
                     <h2 className="section-title">{sectionName}</h2>
                     <div className="post-list">
