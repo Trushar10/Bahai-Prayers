@@ -83,10 +83,42 @@ body {
 	position: relative;
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: space-between;
 	padding: 16px 24px;
 	max-width: 480px;
 	margin: 0 auto;
+}
+
+.header-controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.cache-status {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	background-color: var(--hover-bg);
+	border-radius: 8px;
+	font-size: 12px;
+	color: var(--post-subtext);
+	cursor: help;
+	transition: background-color 0.2s ease;
+}
+
+.cache-status:hover {
+	background-color: var(--post-border);
+}
+
+.cache-icon {
+	font-size: 10px;
+}
+
+.cache-count {
+	font-weight: 500;
+	font-size: 11px;
 }
 
 .back-btn {

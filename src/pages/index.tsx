@@ -5,6 +5,14 @@ import { Document } from '@contentful/rich-text-types'
 import { documentToReactComponents } from '@contentful/rich-text-react-renderer'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
+import { 
+  getCachedPrayer, 
+  getCachedPrayersByLanguage, 
+  cachePrayers, 
+  cachePrayer, 
+  getCacheStats, 
+  prayerCache
+} from '../lib/prayerCache'
 
 const cleanUrlSlug = (text: string): string => {
   return text
@@ -32,19 +40,131 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'home' | 'prayer'>('home')
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [cacheStats, setCacheStats] = useState<{ totalPrayers: number; languages: string[]; lastSync: Date | null; size: number }>({ 
+    totalPrayers: 0, 
+    languages: [], 
+    lastSync: null, 
+    size: 0 
+  })
 
-  // Fetch prayers and tag names together
+  // Initialize cache on app start
+  useEffect(() => {
+    const initCache = async () => {
+      try {
+        await prayerCache.init()
+        const stats = await getCacheStats()
+        setCacheStats(stats)
+      } catch (error) {
+        console.error('Failed to initialize cache:', error)
+      }
+    }
+    initCache()
+  }, [])
+
+  // Fetch prayers and tag names together with caching
   useEffect(() => {
     async function fetchPrayersAndTags() {
-      const res = await fetch(`/api/prayers?lang=${selectedLang}`)
-      const data = await res.json()
-      setFilteredPrayers(Array.isArray(data.items) ? data.items : (data.items ?? []))
+      setIsLoading(true)
+      try {
+        // First, try to get from cache
+        const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
+        
+        if (cachedPrayers.length > 0) {
+          // Use cached data immediately
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prayers: PrayerEntry[] = cachedPrayers.map(cached => ({
+            sys: cached.sys as any,
+            fields: {
+              title: cached.title,
+              slug: cached.slug,
+              body: cached.body as any
+            },
+            metadata: (cached.metadata || {}) as any
+          })) as PrayerEntry[]
+          
+          setFilteredPrayers(prayers)
+          
+          // Build tag mapping from cached data
+          buildTagMapping(prayers)
+        }
+
+        // Always fetch fresh data in background to keep cache updated
+        const needsRefresh = cachedPrayers.length === 0 || await prayerCache.needsRefresh()
+        
+        if (needsRefresh) {
+          const res = await fetch(`/api/prayers?lang=${selectedLang}`)
+          const data = await res.json()
+          
+          if (data.items && Array.isArray(data.items)) {
+            const freshPrayers: PrayerEntry[] = data.items
+            setFilteredPrayers(freshPrayers)
+            
+            // Cache the fresh data
+            await cachePrayers(freshPrayers, selectedLang)
+            
+            // Update cache metadata
+            await prayerCache.updateMetadata({
+              lastFullSync: Date.now(),
+              languages: [selectedLang],
+              totalPrayers: freshPrayers.length
+            })
+            
+            // Update cache stats
+            const stats = await getCacheStats()
+            setCacheStats(stats)
+            
+            // Build tag mapping from fresh data
+            buildTagMapping(freshPrayers, data.tags)
+          }
+        } else if (cachedPrayers.length > 0) {
+          // If we used cache and don't need refresh, still get tag data from API
+          try {
+            const res = await fetch(`/api/prayers?lang=${selectedLang}`)
+            const data = await res.json()
+            if (data.tags) {
+              buildTagMapping(filteredPrayers, data.tags)
+            }
+          } catch (error) {
+            console.warn('Failed to fetch fresh tag data, using cached prayers only')
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching prayers:', error)
+        
+        // Fallback to cached data if network fails
+        const cachedPrayers = await getCachedPrayersByLanguage(selectedLang)
+        if (cachedPrayers.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prayers: PrayerEntry[] = cachedPrayers.map(cached => ({
+            sys: cached.sys as any,
+            fields: {
+              title: cached.title,
+              slug: cached.slug,
+              body: cached.body as any
+            },
+            metadata: (cached.metadata || {}) as any
+          })) as PrayerEntry[]
+          
+          setFilteredPrayers(prayers)
+          buildTagMapping(prayers)
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    function buildTagMapping(prayers: PrayerEntry[], apiTags?: any[]) {
       const mapping: { [id: string]: string } = {}
-      if (data.tags && Array.isArray(data.tags)) {
-        data.tags.forEach((tag: { sys: { id: string }, name?: string }) => {
+      
+      // First, add mappings from API response if available
+      if (apiTags && Array.isArray(apiTags)) {
+        apiTags.forEach((tag: { sys: { id: string }, name?: string }) => {
           mapping[tag.sys.id] = tag.name || tag.sys.id
         })
       }
+      
+      // Add comprehensive fallback mappings
       const fallbackMappings = {
         'obligatory-prayers': 'The Obligatory Prayers',
         'general-prayers': 'General Prayers',
@@ -70,14 +190,17 @@ export default function Home() {
         'special': 'Special Prayers',
         'healing': 'Healing Prayers',
         'protection': 'Protection Prayers',
-      };
+      }
+      
       Object.entries(fallbackMappings).forEach(([id, name]) => {
         if (!mapping[id]) {
-          mapping[id] = name;
+          mapping[id] = name
         }
-      });
+      })
+      
       setTagNames(mapping)
     }
+
     fetchPrayersAndTags()
   }, [selectedLang])
 
@@ -100,14 +223,62 @@ export default function Home() {
 
   const fetchPrayerContent = useCallback(async (slug: string): Promise<PrayerEntry | null> => {
     try {
+      // First, try to get from cache
+      const cachedPrayer = await getCachedPrayer(slug, selectedLang)
+      
+      if (cachedPrayer) {
+        // Convert cached prayer to PrayerEntry format
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prayerEntry: PrayerEntry = {
+          sys: cachedPrayer.sys as any,
+          fields: {
+            title: cachedPrayer.title,
+            slug: cachedPrayer.slug,
+            body: cachedPrayer.body as any
+          },
+          metadata: (cachedPrayer.metadata || {}) as any
+        }
+        return prayerEntry
+      }
+      
+      // If not in cache, fetch from API
       const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
       if (!res.ok) {
         throw new Error('Failed to fetch prayer')
       }
+      
       const data = await res.json()
-      return data.prayer || null
+      const prayer = data.prayer || null
+      
+      if (prayer) {
+        // Cache the prayer for future use
+        await cachePrayer(prayer, selectedLang)
+        
+        // Update cache stats
+        const stats = await getCacheStats()
+        setCacheStats(stats)
+      }
+      
+      return prayer
     } catch (error) {
       console.error('Error fetching prayer:', error)
+      
+      // Fallback to cache if network fails
+      const cachedPrayer = await getCachedPrayer(slug, selectedLang)
+      if (cachedPrayer) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prayerEntry: PrayerEntry = {
+          sys: cachedPrayer.sys as any,
+          fields: {
+            title: cachedPrayer.title,
+            slug: cachedPrayer.slug,
+            body: cachedPrayer.body as any
+          },
+          metadata: (cachedPrayer.metadata || {}) as any
+        }
+        return prayerEntry
+      }
+      
       return null
     }
   }, [selectedLang])
@@ -285,11 +456,19 @@ export default function Home() {
             <header className="header">
               <div className="header-content">
                 <div className="title">Prayers</div>
-                <LanguageToggle
-                  languages={[{ code: 'en', name: 'English' }, { code: 'hi', name: 'हिन्दी' }, { code: 'gu', name: 'ગુજરાતી' }]}
-                  currentLang={selectedLang}
-                  onChange={setSelectedLang}
-                />           
+                <div className="header-controls">
+                  <LanguageToggle
+                    languages={[{ code: 'en', name: 'English' }, { code: 'hi', name: 'हिन्दी' }, { code: 'gu', name: 'ગુજરાતી' }]}
+                    currentLang={selectedLang}
+                    onChange={setSelectedLang}
+                  />
+                  {cacheStats.totalPrayers > 0 && (
+                    <div className="cache-status" title={`Cached: ${cacheStats.totalPrayers} prayers in ${cacheStats.languages.length} languages${cacheStats.lastSync ? `. Last sync: ${new Date(cacheStats.lastSync).toLocaleString()}` : ''}`}>
+                      <span className="cache-icon">💾</span>
+                      <span className="cache-count">{cacheStats.totalPrayers}</span>
+                    </div>
+                  )}
+                </div>           
               </div>
             </header>
 
