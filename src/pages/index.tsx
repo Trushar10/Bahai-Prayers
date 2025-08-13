@@ -22,7 +22,7 @@ const cleanUrlSlug = (text: string): string => {
 }
 
 const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
+  if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -57,13 +57,22 @@ export default function Home() {
 
   // Initialize cache on app start
   useEffect(() => {
+    // Only initialize cache in browser environment
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering, skipping cache initialization')
+      return
+    }
+
     const initCache = async () => {
       try {
         await prayerCache.init()
         const stats = await getCacheStats()
         setCacheStats(stats)
+        console.log('Cache initialized successfully')
       } catch (error) {
-        console.error('Failed to initialize cache:', error)
+        console.warn('Cache initialization failed, continuing without cache:', error)
+        // App will continue to work without cache
+        setCacheStats({ totalPrayers: 0, languages: [], lastSync: null, size: 0 })
       }
     }
     initCache()

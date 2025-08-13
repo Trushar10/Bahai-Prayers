@@ -36,49 +36,82 @@ class PrayerCacheManager {
 
   // Initialize IndexedDB
   async init(): Promise<void> {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.warn('IndexedDB not available in server environment');
+      return;
+    }
+
+    // Check if IndexedDB is supported
+    if (!('indexedDB' in window)) {
+      console.warn('IndexedDB not supported in this browser');
+      return;
+    }
+
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
+      try {
+        const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => {
-        console.error('Failed to open IndexedDB:', request.error);
-        reject(request.error);
-      };
+        request.onerror = () => {
+          console.error('Failed to open IndexedDB:', request.error);
+          // Don't reject, just warn and continue without cache
+          console.warn('Continuing without cache functionality');
+          resolve();
+        };
 
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
+        request.onsuccess = () => {
+          this.db = request.result;
+          console.log('IndexedDB initialized successfully');
+          resolve();
+        };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create prayers store
-        if (!db.objectStoreNames.contains('prayers')) {
-          const prayersStore = db.createObjectStore('prayers', { keyPath: 'id' });
-          prayersStore.createIndex('language', 'language', { unique: false });
-          prayersStore.createIndex('slug', 'slug', { unique: false });
-          prayersStore.createIndex('cachedAt', 'cachedAt', { unique: false });
-        }
+        request.onupgradeneeded = (event) => {
+          try {
+            const db = (event.target as IDBOpenDBRequest).result;
+            
+            // Create prayers store
+            if (!db.objectStoreNames.contains('prayers')) {
+              const prayersStore = db.createObjectStore('prayers', { keyPath: 'id' });
+              prayersStore.createIndex('language', 'language', { unique: false });
+              prayersStore.createIndex('slug', 'slug', { unique: false });
+              prayersStore.createIndex('cachedAt', 'cachedAt', { unique: false });
+            }
 
-        // Create metadata store
-        if (!db.objectStoreNames.contains('metadata')) {
-          db.createObjectStore('metadata', { keyPath: 'key' });
-        }
-      };
+            // Create metadata store
+            if (!db.objectStoreNames.contains('metadata')) {
+              db.createObjectStore('metadata', { keyPath: 'key' });
+            }
+          } catch (upgradeError) {
+            console.error('Error during IndexedDB upgrade:', upgradeError);
+            resolve(); // Continue without cache
+          }
+        };
+      } catch (initError) {
+        console.error('Error initializing IndexedDB:', initError);
+        resolve(); // Continue without cache
+      }
     });
   }
 
   // Ensure DB is initialized
   private async ensureInit(): Promise<void> {
-    if (!this.db) {
+    if (!this.db && typeof window !== 'undefined' && 'indexedDB' in window) {
       await this.init();
     }
+  }
+
+  // Check if cache is available
+  private isCacheAvailable(): boolean {
+    return typeof window !== 'undefined' && 'indexedDB' in window && this.db !== null;
   }
 
   // Get cached prayer by slug and language
   async getCachedPrayer(slug: string, language: string): Promise<CachedPrayer | null> {
     await this.ensureInit();
-    if (!this.db) return null;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, returning null');
+      return null;
+    }
 
     return new Promise((resolve) => {
       const transaction = this.db!.transaction(['prayers'], 'readonly');
@@ -102,7 +135,10 @@ class PrayerCacheManager {
   // Get all cached prayers for a language
   async getCachedPrayersByLanguage(language: string): Promise<CachedPrayer[]> {
     await this.ensureInit();
-    if (!this.db) return [];
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, returning empty array');
+      return [];
+    }
 
     return new Promise((resolve) => {
       const transaction = this.db!.transaction(['prayers'], 'readonly');
@@ -124,7 +160,10 @@ class PrayerCacheManager {
   // Cache a single prayer
   async cachePrayer(prayer: PrayerEntry, language: string): Promise<void> {
     await this.ensureInit();
-    if (!this.db) return;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, skipping cache operation');
+      return;
+    }
 
     const cachedPrayer: CachedPrayer = {
       id: `${prayer.sys.id}-${language}`,
@@ -153,7 +192,10 @@ class PrayerCacheManager {
   // Cache multiple prayers
   async cachePrayers(prayers: PrayerEntry[], language: string): Promise<void> {
     await this.ensureInit();
-    if (!this.db) return;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, skipping cache operation');
+      return;
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['prayers'], 'readwrite');
@@ -199,7 +241,10 @@ class PrayerCacheManager {
   // Update cache metadata
   async updateMetadata(metadata: Partial<CacheMetadata>): Promise<void> {
     await this.ensureInit();
-    if (!this.db) return;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, skipping metadata update');
+      return;
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['metadata'], 'readwrite');
@@ -249,7 +294,10 @@ class PrayerCacheManager {
   // Clear all cached data
   async clearCache(): Promise<void> {
     await this.ensureInit();
-    if (!this.db) return;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, skipping clear operation');
+      return;
+    }
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['prayers', 'metadata'], 'readwrite');
@@ -278,7 +326,10 @@ class PrayerCacheManager {
   // Get cache statistics
   async getCacheStats(): Promise<{ totalPrayers: number; languages: string[]; lastSync: Date | null; size: number }> {
     await this.ensureInit();
-    if (!this.db) return { totalPrayers: 0, languages: [], lastSync: null, size: 0 };
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, returning empty stats');
+      return { totalPrayers: 0, languages: [], lastSync: null, size: 0 };
+    }
 
     // Get actual database size first
     const actualSize = await this.getDatabaseSize();
@@ -331,7 +382,10 @@ class PrayerCacheManager {
   // Get actual database size
   async getDatabaseSize(): Promise<number> {
     await this.ensureInit();
-    if (!this.db) return 0;
+    if (!this.isCacheAvailable()) {
+      console.warn('Cache not available, returning 0 for database size');
+      return 0;
+    }
 
     return new Promise((resolve) => {
       const transaction = this.db!.transaction(['prayers'], 'readonly');
