@@ -16,11 +16,13 @@ The offline indicator will automatically show when your internet connection is l
 ### Offline Prayer Access Testing:
 
 #### Scenario 1: Going offline after loading
+
 1. **Load the app while online** (prayers get cached automatically)
 2. **Disconnect internet**
 3. **Browse prayers** - all should work including individual prayer content
 
 #### Scenario 2: Starting the app while already offline
+
 1. **Disconnect internet first**
 2. **Open the prayer app** (loads from cache if previously visited)
 3. **Browse prayers list** - should show cached prayers
@@ -29,21 +31,21 @@ The offline indicator will automatically show when your internet connection is l
 
 ### Visual Indicators:
 
-- **🟡 Offline Bar**: Yellow background with amber text when offline
-- **🟢 Online Bar**: Green background with dark green text when reconnected
-- **Auto-hide**: Online message disappears after 3 seconds
-- **Persistent**: Offline message stays until connection is restored
-- **Error Messages**: Red error toast for prayers not available offline
+-   **🟡 Offline Bar**: Yellow background with amber text when offline
+-   **🟢 Online Bar**: Green background with dark green text when reconnected
+-   **Auto-hide**: Online message disappears after 3 seconds
+-   **Persistent**: Offline message stays until connection is restored
+-   **Error Messages**: Red error toast for prayers not available offline
 
 ### Features:
 
-- ✅ **Responsive Design**: Works on mobile and desktop
-- ✅ **Dark Mode Support**: Adapts to theme changes
-- ✅ **Cross-page**: Shows on both home page and individual prayer pages
-- ✅ **SSR Safe**: Handles server-side rendering properly
-- ✅ **Cached Content**: Users can still access cached prayers when offline
-- ✅ **Improved Offline Access**: Prayers from list cache now accessible when clicking
-- ✅ **Error Feedback**: Clear messages when content isn't available offline
+-   ✅ **Responsive Design**: Works on mobile and desktop
+-   ✅ **Dark Mode Support**: Adapts to theme changes
+-   ✅ **Cross-page**: Shows on both home page and individual prayer pages
+-   ✅ **SSR Safe**: Handles server-side rendering properly
+-   ✅ **Cached Content**: Users can still access cached prayers when offline
+-   ✅ **Improved Offline Access**: Prayers from list cache now accessible when clicking
+-   ✅ **Error Feedback**: Clear messages when content isn't available offline
 
 ### Browser Developer Tools Testing:
 
@@ -57,19 +59,21 @@ You can also simulate offline mode using browser dev tools:
 ### Technical Implementation:
 
 #### Multi-layered Fallback System:
+
 1. **IndexedDB Cache**: First check for individually cached prayers
 2. **Current List Cache**: Fallback to prayers loaded in current session
 3. **Network Fetch**: Try to fetch from API if online
 4. **Error Handling**: Show user-friendly error if all methods fail
 
 #### Caching Strategy:
-- **Automatic Caching**: All loaded prayers are automatically cached
-- **Background Sync**: Fresh data fetched when online to update cache
-- **Multiple Lookup Methods**: Handles both clean URLs and original slugs
+
+-   **Automatic Caching**: All loaded prayers are automatically cached
+-   **Background Sync**: Fresh data fetched when online to update cache
+-   **Multiple Lookup Methods**: Handles both clean URLs and original slugs
 
 ### Notes:
 
-- The indicator only shows when actually offline AND there's cached content available
-- Uses the browser's `navigator.onLine` API and network event listeners
-- Positioned as a fixed top bar that doesn't interfere with app navigation
-- Individual prayers now accessible even when starting offline (if previously cached)
+-   The indicator only shows when actually offline AND there's cached content available
+-   Uses the browser's `navigator.onLine` API and network event listeners
+-   Positioned as a fixed top bar that doesn't interfere with app navigation
+-   Individual prayers now accessible even when starting offline (if previously cached)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useOnlineStatus } from '../lib/offline';
+import { useOnlineStatus, getCacheStatus } from '../lib/offline';
 
 interface OfflineIndicatorProps {
   showOnlineMessage?: boolean;
@@ -11,21 +11,36 @@ const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
   className = '' 
 }) => {
   const [mounted, setMounted] = useState(false);
-  const isOnline = useOnlineStatus();
+  const { isOnline, networkTested } = useOnlineStatus();
   const [showIndicator, setShowIndicator] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
+  const [hasCachedContent, setHasCachedContent] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check for cached content
+    const checkCache = async () => {
+      try {
+        const cacheStatus = await getCacheStatus();
+        setHasCachedContent(cacheStatus.cachedPrayersCount > 0);
+      } catch (error) {
+        console.warn('Failed to check cache status:', error);
+        setHasCachedContent(false);
+      }
+    };
+    
+    checkCache();
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !networkTested) return;
     
-    if (!isOnline) {
+    // Show offline indicator if we're offline AND have cached content
+    if (!isOnline && hasCachedContent) {
       setShowIndicator(true);
       setWasOffline(true);
-    } else if (wasOffline && showOnlineMessage) {
+    } else if (isOnline && wasOffline && showOnlineMessage) {
       // Show "back online" message briefly when reconnected
       setShowIndicator(true);
       const timer = setTimeout(() => {
@@ -36,7 +51,7 @@ const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({
     } else {
       setShowIndicator(false);
     }
-  }, [isOnline, wasOffline, showOnlineMessage, mounted]);
+  }, [isOnline, wasOffline, showOnlineMessage, mounted, networkTested, hasCachedContent]);
 
   if (!mounted || !showIndicator) return null;
 

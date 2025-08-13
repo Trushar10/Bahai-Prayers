@@ -1,6 +1,6 @@
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
+import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
 
@@ -9,31 +9,46 @@ import { ExpirationPlugin } from 'workbox-expiration';
 // @ts-expect-error self.__WB_MANIFEST is injected by workbox at build time
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// ✅ Runtime caching for prayers API
+// ✅ Cache the main app page with NetworkFirst (offline-friendly)
+registerRoute(
+	({ url }) => url.pathname === '/' || url.pathname === '',
+	new NetworkFirst({
+		cacheName: 'app-shell-cache',
+		plugins: [
+			new CacheableResponsePlugin({ statuses: [0, 200] }),
+			new ExpirationPlugin({
+				maxEntries: 5,
+				maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+			}),
+		],
+	})
+);
+
+// ✅ Runtime caching for prayers API with offline-first approach
 registerRoute(
 	({ url }) => url.pathname.startsWith('/api/prayers'),
-	new StaleWhileRevalidate({
+	new CacheFirst({
 		cacheName: 'prayers-cache',
 		plugins: [
 			new CacheableResponsePlugin({ statuses: [0, 200] }),
 			new ExpirationPlugin({
 				maxEntries: 50,
-				maxAgeSeconds: 60 * 60 * 24,
-			}), // 1 day
+				maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+			}),
 		],
 	})
 );
 
-// ✅ Runtime caching for individual prayer slugs
+// ✅ Runtime caching for individual prayer slugs with offline-first
 registerRoute(
 	({ url }) => url.pathname.startsWith('/api/prayer/'),
-	new StaleWhileRevalidate({
+	new CacheFirst({
 		cacheName: 'prayer-detail-cache',
 		plugins: [
 			new CacheableResponsePlugin({ statuses: [0, 200] }),
 			new ExpirationPlugin({
-				maxEntries: 50,
-				maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+				maxEntries: 100,
+				maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
 			}),
 		],
 	})

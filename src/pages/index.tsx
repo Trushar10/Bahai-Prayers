@@ -186,13 +186,17 @@ function PrayerApp() {
           
           // Build tag mapping from cached data
           buildTagMapping(prayers)
+          
+          console.log('Loaded prayers from cache:', prayers.length)
         }
 
-        // Always fetch fresh data in background to keep cache updated
+        // Check network connectivity before attempting fresh fetch
+        const isOnline = navigator.onLine
         const needsRefresh = cachedPrayers.length === 0 || await prayerCache.needsRefresh()
         
-        if (needsRefresh) {
+        if (needsRefresh && isOnline) {
           try {
+            console.log('Attempting to fetch fresh prayers...')
             const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             
             if (!res.ok) {
@@ -226,12 +230,13 @@ function PrayerApp() {
             console.warn('Network request failed, using cached data:', networkError)
             // If we have cached data, continue using it
             if (cachedPrayers.length === 0) {
-              // No cached data and network failed - this is a problem
+              // No cached data and network failed - show error
               console.error('No cached data available and network failed')
+              setHasError(true)
             }
           }
-        } else if (cachedPrayers.length > 0) {
-          // If we used cache and don't need refresh, still get tag data from API
+        } else if (cachedPrayers.length > 0 && isOnline) {
+          // If we used cache and don't need refresh, still get tag data from API if online
           try {
             const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             const data = await res.json()
@@ -242,6 +247,9 @@ function PrayerApp() {
           } catch (fetchError) {
             console.warn('Failed to fetch fresh tag data, using cached prayers only', fetchError)
           }
+        } else {
+          // Offline or no need to refresh - just use cached data
+          console.log('Using cached data only (offline or no refresh needed)')
         }
       } catch (error) {
         console.error('Error fetching prayers:', error)

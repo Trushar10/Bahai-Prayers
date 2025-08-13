@@ -176,23 +176,58 @@ export function useOnlineStatus() {
     return navigator.onLine;
   });
 
+  const [networkTested, setNetworkTested] = useState(false);
+
   useEffect(() => {
     // Set the actual online status once mounted on client
     if (typeof window !== 'undefined') {
       setIsOnline(navigator.onLine);
+      
+      // Test actual network connectivity
+      const testNetworkConnectivity = async () => {
+        try {
+          // Try to fetch a small resource to test real connectivity
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          const response = await fetch('/api/prayers?lang=en&test=1', {
+            method: 'HEAD',
+            signal: controller.signal,
+            cache: 'no-cache'
+          });
+          
+          clearTimeout(timeoutId);
+          setIsOnline(response.ok);
+          setNetworkTested(true);
+        } catch (error) {
+          console.warn('Network connectivity test failed:', error);
+          setIsOnline(false);
+          setNetworkTested(true);
+        }
+      };
+
+      // Initial connectivity test
+      testNetworkConnectivity();
+      
+      // Periodic connectivity test every 30 seconds
+      const intervalId = setInterval(testNetworkConnectivity, 30000);
+
+      const handleOnline = () => {
+        setIsOnline(true);
+        testNetworkConnectivity(); // Verify actual connectivity
+      };
+      const handleOffline = () => setIsOnline(false);
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
     }
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
-  return isOnline;
+  return { isOnline, networkTested };
 }
