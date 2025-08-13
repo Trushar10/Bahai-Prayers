@@ -1,10 +1,13 @@
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: true,
+  register: false, // Disable automatic registration
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  swSrc: 'src/sw.js', // now in src/
-  swDest: 'sw.js',
+  disable: true, // Temporarily disable PWA
+  swSrc: 'src/sw.js',
+  swDest: 'public/sw.js',
+  fallbacks: {
+    document: '/offline',
+  },
 });
 
 module.exports = withPWA({
