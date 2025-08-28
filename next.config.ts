@@ -1,8 +1,10 @@
+const isProd = process.env.NODE_ENV === 'production';
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: false, // We'll register manually in usePWA hook
   skipWaiting: true,
-  disable: false, // Enable PWA in production
+  disable: !isProd, // Only enable in production
   swSrc: 'src/sw.simple.js',
   swDest: 'public/sw.js',
   fallbacks: {

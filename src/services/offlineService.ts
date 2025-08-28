@@ -7,10 +7,31 @@ class OfflineService {
   async downloadAllContent(progressCallback?: (progress: number) => void): Promise<void> {
     try {
       const languages = ['en', 'hi', 'gu']; // Your supported languages
-      const totalSteps = languages.length * 2; // prayers list + individual prayers for each language
+      const totalSteps = languages.length * 2 + 1; // prayers list + individual prayers + app shell
       let completedSteps = 0;
 
       const cache = await caches.open(this.CACHE_NAME);
+      
+      // First, cache the app shell and essential pages
+      try {
+        const appShellUrls = ['/', '/offline', '/manifest.json'];
+        const appShellPromises = appShellUrls.map(async (url) => {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              await cache.put(url, response.clone());
+            }
+          } catch (error) {
+            console.warn(`Failed to cache app shell resource ${url}:`, error);
+          }
+        });
+        
+        await Promise.all(appShellPromises);
+        completedSteps++;
+        progressCallback?.(Math.round((completedSteps / totalSteps) * 100));
+      } catch (error) {
+        console.warn('Failed to cache app shell:', error);
+      }
       
       for (const lang of languages) {
         try {

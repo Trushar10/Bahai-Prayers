@@ -17,23 +17,39 @@ export const usePWA = () => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
+            updateViaCache: 'none', // Always check for updates
           });
           
           setSwRegistration(registration);
           console.log('SW registered successfully:', registration);
+          
+          // Force immediate activation of new service worker
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
           
           // Handle service worker updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker is available
-                  console.log('New service worker available');
+                if (newWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('New service worker available, will refresh');
+                    // Auto-refresh to use new service worker
+                    window.location.reload();
+                  } else {
+                    console.log('Service worker installed for the first time');
+                  }
                 }
               });
             }
           });
+          
+          // Check for updates periodically
+          setInterval(() => {
+            registration.update();
+          }, 60000); // Check every minute
           
         } catch (error) {
           console.error('SW registration failed:', error);
