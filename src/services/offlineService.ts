@@ -51,14 +51,22 @@ class OfflineService {
             completedSteps++;
             progressCallback?.(Math.round((completedSteps / totalSteps) * 100));
 
-            // Download individual prayer details
+            // Download individual prayer details (both API and HTML pages)
             if (prayersData.items && Array.isArray(prayersData.items)) {
               const detailPromises = prayersData.items.map(async (prayer: { fields?: { slug?: string } }) => {
                 if (prayer.fields?.slug) {
+                  const cleanSlug = this.cleanUrlSlug(prayer.fields.slug);
                   try {
+                    // Cache the API endpoint
                     const prayerResponse = await fetch(`/api/prayer/${prayer.fields.slug}?lang=${lang}`);
                     if (prayerResponse.ok) {
                       await cache.put(`/api/prayer/${prayer.fields.slug}?lang=${lang}`, prayerResponse.clone());
+                    }
+
+                    // Cache the actual HTML page for navigation
+                    const prayerPageResponse = await fetch(`/${cleanSlug}`);
+                    if (prayerPageResponse.ok) {
+                      await cache.put(`/${cleanSlug}`, prayerPageResponse.clone());
                     }
                   } catch (error) {
                     console.warn(`Failed to cache prayer ${prayer.fields.slug} for ${lang}:`, error);
@@ -138,6 +146,15 @@ class OfflineService {
       console.error('Error clearing offline content:', error);
       throw error;
     }
+  }
+
+  // Helper function to clean URL slugs (replace spaces with hyphens)
+  private cleanUrlSlug(text: string): string {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/\-\-+/g, '-'); // Replace multiple hyphens with single hyphen
   }
 
   async getOfflineContentStats(): Promise<{

@@ -1,6 +1,10 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import {
+	CacheFirst,
+	NetworkFirst,
+	StaleWhileRevalidate,
+} from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
 
@@ -10,161 +14,182 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 // Clean up outdated caches
 cleanupOutdatedCaches();
 
-// Cache the main app shell with offline-first approach
+// Cache the main app shell and prayer pages with offline-first approach
 registerRoute(
-  ({ request, url }) => {
-    return request.mode === 'navigate' || 
-           url.pathname === '/' || 
-           url.pathname === '/index' ||
-           !url.pathname.startsWith('/api/');
-  },
-  new NetworkFirst({
-    cacheName: 'pages-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-      }),
-    ],
-    networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
-  })
+	({ request, url }) => {
+		return (
+			request.mode === 'navigate' &&
+			(url.pathname === '/' ||
+				url.pathname === '/index' ||
+				url.pathname === '/offline' ||
+				// Match prayer page routes (any path that doesn't start with /api/ or special paths)
+				(!url.pathname.startsWith('/api/') &&
+					!url.pathname.startsWith('/_next/') &&
+					!url.pathname.startsWith('/static/') &&
+					!url.pathname.endsWith('.js') &&
+					!url.pathname.endsWith('.css') &&
+					!url.pathname.endsWith('.json') &&
+					!url.pathname.endsWith('.ico')))
+		);
+	},
+	new NetworkFirst({
+		cacheName: 'pages-cache',
+		plugins: [
+			new CacheableResponsePlugin({
+				statuses: [0, 200],
+			}),
+			new ExpirationPlugin({
+				maxEntries: 100,
+				maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+			}),
+		],
+		networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
+	})
 );
 
 // Cache API calls with offline-first approach
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/prayers'),
-  new CacheFirst({
-    cacheName: 'prayers-api-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
-      }),
-    ],
-  })
+	({ url }) => url.pathname.startsWith('/api/prayers'),
+	new CacheFirst({
+		cacheName: 'prayers-api-cache',
+		plugins: [
+			new CacheableResponsePlugin({
+				statuses: [0, 200],
+			}),
+			new ExpirationPlugin({
+				maxEntries: 100,
+				maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+			}),
+		],
+	})
 );
 
 // Cache individual prayer API calls
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/prayer/'),
-  new CacheFirst({
-    cacheName: 'prayer-details-cache',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 500,
-        maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
-      }),
-    ],
-  })
+	({ url }) => url.pathname.startsWith('/api/prayer/'),
+	new CacheFirst({
+		cacheName: 'prayer-details-cache',
+		plugins: [
+			new CacheableResponsePlugin({
+				statuses: [0, 200],
+			}),
+			new ExpirationPlugin({
+				maxEntries: 500,
+				maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
+			}),
+		],
+	})
 );
 
 // Cache static assets (JS, CSS, images)
 registerRoute(
-  ({ request }) => 
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'image' ||
-    request.destination === 'font',
-  new StaleWhileRevalidate({
-    cacheName: 'static-resources',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 200,
-        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-      }),
-    ],
-  })
+	({ request }) =>
+		request.destination === 'script' ||
+		request.destination === 'style' ||
+		request.destination === 'image' ||
+		request.destination === 'font',
+	new StaleWhileRevalidate({
+		cacheName: 'static-resources',
+		plugins: [
+			new CacheableResponsePlugin({
+				statuses: [0, 200],
+			}),
+			new ExpirationPlugin({
+				maxEntries: 200,
+				maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+			}),
+		],
+	})
 );
 
 // Handle offline navigation - serve cached page or offline page
 registerRoute(
-  new NavigationRoute(
-    new NetworkFirst({
-      cacheName: 'navigation-cache',
-      plugins: [
-        new CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
-      ],
-      networkTimeoutSeconds: 3,
-    })
-  )
+	new NavigationRoute(
+		new NetworkFirst({
+			cacheName: 'navigation-cache',
+			plugins: [
+				new CacheableResponsePlugin({
+					statuses: [0, 200],
+				}),
+			],
+			networkTimeoutSeconds: 3,
+		})
+	)
 );
 
 // Install event - cache essential resources immediately
 self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
-  
-  // Cache essential pages immediately
-  event.waitUntil(
-    caches.open('essential-cache-v1').then((cache) => {
-      return cache.addAll([
-        '/',
-        '/offline',
-        '/manifest.json'
-      ]).catch((error) => {
-        console.warn('Failed to cache essential resources:', error);
-      });
-    })
-  );
-  
-  self.skipWaiting();
+	console.log('Service Worker installing...');
+
+	// Cache essential pages immediately
+	event.waitUntil(
+		caches.open('essential-cache-v1').then((cache) => {
+			return cache
+				.addAll(['/', '/offline', '/manifest.json'])
+				.catch((error) => {
+					console.warn('Failed to cache essential resources:', error);
+				});
+		})
+	);
+
+	self.skipWaiting();
 });
 
 // Activate event - take control immediately
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
-  event.waitUntil(self.clients.claim());
+	console.log('Service Worker activating...');
+	event.waitUntil(self.clients.claim());
 });
 
 // Handle fetch events for better offline support
 self.addEventListener('fetch', (event) => {
-  // Handle navigation requests specially
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // If online, cache the response
-          const responseClone = response.clone();
-          caches.open('navigation-cache').then((cache) => {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(async () => {
-          // If offline, try to serve from cache
-          const cachedResponse = await caches.match(event.request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // Fallback to home page if available
-          const homePageCache = await caches.match('/');
-          if (homePageCache) {
-            return homePageCache;
-          }
-          
-          // Last resort - serve offline page
-          const offlineCache = await caches.match('/offline');
-          if (offlineCache) {
-            return offlineCache;
-          }
-          
-          // If all else fails, return a basic offline response
-          return new Response(
-            `<!DOCTYPE html>
+	// Handle navigation requests specially
+	if (event.request.mode === 'navigate') {
+		event.respondWith(
+			fetch(event.request)
+				.then((response) => {
+					// If online, cache the response
+					if (response.ok) {
+						const responseClone = response.clone();
+						caches.open('pages-cache').then((cache) => {
+							cache.put(event.request, responseClone);
+						});
+					}
+					return response;
+				})
+				.catch(async () => {
+					// If offline, try to serve from cache
+					const cachedResponse = await caches.match(event.request);
+					if (cachedResponse) {
+						return cachedResponse;
+					}
+
+					// For prayer pages, try to match with different cache patterns
+					const url = new URL(event.request.url);
+					const pathname = url.pathname;
+
+					// Try to find in pages cache with exact path
+					const pagesCache = await caches.open('pages-cache');
+					const exactMatch = await pagesCache.match(pathname);
+					if (exactMatch) {
+						return exactMatch;
+					}
+
+					// Fallback to home page if available
+					const homePageCache = await caches.match('/');
+					if (homePageCache) {
+						return homePageCache;
+					}
+
+					// Last resort - serve offline page
+					const offlineCache = await caches.match('/offline');
+					if (offlineCache) {
+						return offlineCache;
+					}
+
+					// If all else fails, return a basic offline response
+					return new Response(
+						`<!DOCTYPE html>
             <html>
               <head>
                 <title>Offline - Prayer App</title>
@@ -172,30 +197,32 @@ self.addEventListener('fetch', (event) => {
                 <style>
                   body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
                   .offline { color: #666; }
+                  .back-btn { margin: 20px; padding: 10px 20px; background: #317EFB; color: white; border: none; border-radius: 5px; cursor: pointer; }
                 </style>
               </head>
               <body>
                 <div class="offline">
                   <h1>📱 Prayer App</h1>
-                  <p>You are currently offline.</p>
-                  <p>Please check your internet connection and try again.</p>
-                  <button onclick="window.location.reload()">Retry</button>
+                  <p>This prayer is not available offline.</p>
+                  <p>Please connect to the internet to view this content.</p>
+                  <button class="back-btn" onclick="window.history.back()">← Go Back</button>
+                  <button class="back-btn" onclick="window.location.href='/'">🏠 Home</button>
                 </div>
               </body>
             </html>`,
-            {
-              headers: { 'Content-Type': 'text/html' },
-              status: 200
-            }
-          );
-        })
-    );
-  }
+						{
+							headers: { 'Content-Type': 'text/html' },
+							status: 200,
+						}
+					);
+				})
+		);
+	}
 });
 
 // Listen for messages from the main thread
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+	if (event.data && event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting();
+	}
 });
