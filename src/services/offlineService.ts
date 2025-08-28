@@ -1,7 +1,7 @@
 import { cachePrayers } from '../lib/prayerCache';
 
 class OfflineService {
-  private readonly CACHE_NAME = 'prayer-offline-v1';
+  private readonly CACHE_NAME = 'prayer-offline-v2';
   private readonly CONTENT_KEY = 'offlineContent';
 
   async downloadAllContent(progressCallback?: (progress: number) => void): Promise<void> {
