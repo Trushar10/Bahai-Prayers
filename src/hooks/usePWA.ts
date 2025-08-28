@@ -2,27 +2,56 @@ import { useState, useEffect } from 'react';
 
 export const usePWA = () => {
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('SW registered: ', registration);
-          })
-          .catch((registrationError) => {
-            console.log('SW registration failed: ', registrationError);
-          });
-      });
+    // Initialize online status
+    if (typeof navigator !== 'undefined') {
+      setIsOnline(navigator.onLine);
     }
 
-    // Check if app is installed
-    const checkInstalled = () => {
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        setIsInstalled(true);
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      const registerSW = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/',
+          });
+          
+          setSwRegistration(registration);
+          console.log('SW registered successfully:', registration);
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker is available
+                  console.log('New service worker available');
+                }
+              });
+            }
+          });
+          
+        } catch (error) {
+          console.error('SW registration failed:', error);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        window.addEventListener('load', registerSW);
+      } else {
+        registerSW();
       }
+    }
+
+    // Check if app is installed (PWA)
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSInstalled = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+      setIsInstalled(isStandalone || isIOSInstalled);
     };
 
     // Monitor online status
@@ -32,13 +61,33 @@ export const usePWA = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Check installation status
     checkInstalled();
+    
+    // Listen for app installation
+    window.addEventListener('appinstalled', () => {
+      setIsInstalled(true);
+      console.log('PWA was installed successfully');
+    });
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('appinstalled', () => setIsInstalled(true));
     };
   }, []);
 
-  return { isInstalled, isOnline };
+  const updateServiceWorker = () => {
+    if (swRegistration && swRegistration.waiting) {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    }
+  };
+
+  return { 
+    isInstalled, 
+    isOnline, 
+    swRegistration,
+    updateServiceWorker 
+  };
 };

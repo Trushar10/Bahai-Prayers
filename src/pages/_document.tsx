@@ -4,6 +4,25 @@ export default function Document() {
   return (
     <Html>
       <Head>
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#007bff" />
+        
+        {/* Icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.webp" />
+        
+        {/* iOS specific PWA meta tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Prayer App" />
+        
+        {/* Android specific */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        
+        {/* Viewport */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no, viewport-fit=cover" />
+        
         {/* Preload theme before React hydration */}
         <script
           dangerouslySetInnerHTML={{

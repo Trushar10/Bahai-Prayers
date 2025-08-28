@@ -95,6 +95,50 @@ body {
 	gap: 12px;
 }
 
+.install-btn {
+	padding: 8px 12px;
+	background-color: #007bff;
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 500;
+	position: relative;
+	min-width: 100px;
+	overflow: hidden;
+	transition: all 0.2s ease;
+	font-family: inherit;
+}
+
+.install-btn:hover:not(:disabled) {
+	background-color: #0056b3;
+	transform: translateY(-1px);
+}
+
+.install-btn:disabled {
+	background-color: #6c757d;
+	cursor: not-allowed;
+}
+
+.offline-status {
+	font-size: 14px;
+	cursor: help;
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
 .cache-status {
 	display: flex;
 	align-items: center;

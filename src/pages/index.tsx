@@ -7,6 +7,8 @@ import { BLOCKS } from '@contentful/rich-text-types'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import OfflineIndicator from '../components/OfflineIndicator'
+import InstallPrompt from '../components/InstallPrompt'
+import { usePWA } from '../hooks/usePWA'
 import { 
   getCachedPrayer, 
   getCachedPrayersByLanguage, 
@@ -131,6 +133,9 @@ function PrayerApp() {
     lastSync: null, 
     size: 0 
   })
+
+  // Initialize PWA
+  const { isOnline } = usePWA();
 
   // Initialize cache on app start
   useEffect(() => {
@@ -738,11 +743,20 @@ function PrayerApp() {
               <div className="header-content">
                 <div className="title">Prayers</div>
                 <div className="header-controls">
+                  <InstallPrompt onDownloadComplete={() => {
+                    // Refresh cache stats after download
+                    getCacheStats().then(stats => setCacheStats(stats));
+                  }} />
                   <LanguageToggle
                     languages={[{ code: 'en', name: 'English' }, { code: 'hi', name: 'हिन्दी' }, { code: 'gu', name: 'ગુજરાતી' }]}
                     currentLang={selectedLang}
                     onChange={setSelectedLang}
                   />
+                  {!isOnline && (
+                    <div className="offline-status" title="You are offline">
+                      🔴
+                    </div>
+                  )}
                   {cacheStats.totalPrayers > 0 && (
                     <div className="cache-status" title={`Cached: ${cacheStats.totalPrayers} prayers in ${cacheStats.languages.length} languages. Size: ${formatBytes(cacheStats.size)}${cacheStats.lastSync ? `. Last sync: ${new Date(cacheStats.lastSync).toLocaleString()}` : ''}`}>
                       <span className="cache-icon">💾</span>
