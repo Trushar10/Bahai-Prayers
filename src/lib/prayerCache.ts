@@ -61,7 +61,6 @@ class PrayerCacheManager {
 
         request.onsuccess = () => {
           this.db = request.result;
-          console.log('IndexedDB initialized successfully');
           resolve();
         };
 
@@ -70,39 +69,29 @@ class PrayerCacheManager {
             const db = (event.target as IDBOpenDBRequest).result;
             const transaction = (event.target as IDBOpenDBRequest).transaction;
             
-            console.log('Upgrading IndexedDB from version', event.oldVersion, 'to', event.newVersion);
-            
             // Handle prayers store
             let prayersStore: IDBObjectStore;
             if (!db.objectStoreNames.contains('prayers')) {
-              console.log('Creating prayers object store');
               prayersStore = db.createObjectStore('prayers', { keyPath: 'id' });
             } else {
-              console.log('Using existing prayers object store');
               prayersStore = transaction!.objectStore('prayers');
             }
             
             // Ensure all required indexes exist
             if (!prayersStore.indexNames.contains('language')) {
-              console.log('Creating language index');
               prayersStore.createIndex('language', 'language', { unique: false });
             }
             if (!prayersStore.indexNames.contains('slug')) {
-              console.log('Creating slug index');
               prayersStore.createIndex('slug', 'slug', { unique: false });
             }
             if (!prayersStore.indexNames.contains('cachedAt')) {
-              console.log('Creating cachedAt index');
               prayersStore.createIndex('cachedAt', 'cachedAt', { unique: false });
             }
 
             // Handle metadata store
             if (!db.objectStoreNames.contains('metadata')) {
-              console.log('Creating metadata object store');
               db.createObjectStore('metadata', { keyPath: 'key' });
             }
-            
-            console.log('IndexedDB upgrade completed successfully');
           } catch (upgradeError) {
             console.error('Error during IndexedDB upgrade:', upgradeError);
             resolve(); // Continue without cache

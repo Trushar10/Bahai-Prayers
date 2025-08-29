@@ -36,16 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ).filter(Boolean)
     ));
 
-    console.log(`Found ${tagIds.length} unique tag IDs for language "${langCode}":`, tagIds);
-
     // ONLY translate tag names - prayer titles stay in original language
     const tags = tagIds.map(tagId => ({
       sys: { id: tagId },
       name: getTagTranslation(tagId, validLangCode) // Use validated language for tag translation
     }));
-
-    console.log(`Generated ${tags.length} localized tag names for "${validLangCode}":`, 
-      tags.map(tag => `"${tag.sys.id}" -> "${tag.name}"`));
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate');
     res.status(200).json({ 

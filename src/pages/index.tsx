@@ -141,19 +141,16 @@ function PrayerApp() {
   useEffect(() => {
     // Only initialize cache in browser environment
     if (typeof window === 'undefined') {
-      console.log('🖥️ Server-side rendering, skipping cache initialization')
       return
     }
 
     const initCache = async () => {
       try {
-        console.log('🔧 Initializing prayer cache...')
         await prayerCache.init()
         const stats = await getCacheStats()
         setCacheStats(stats)
-        console.log('✅ Cache initialized successfully:', stats)
       } catch (error) {
-        console.warn('❌ Cache initialization failed, continuing without cache:', error)
+        console.warn('Cache initialization failed, continuing without cache:', error)
         // App will continue to work without cache
         setCacheStats({ totalPrayers: 0, languages: [], lastSync: null, size: 0 })
       }
@@ -163,23 +160,18 @@ function PrayerApp() {
 
   // Fetch prayers and tag names together with caching
   useEffect(() => {
-    async function fetchPrayersAndTags() {
-      console.log('🔍 Starting prayer fetch for language:', selectedLang)
-      
+    async function fetchPrayersAndTags() {      
       try {
         // First, try to get from cache
         let cachedPrayers: CachedPrayer[] = []
         try {
-          console.log('📦 Checking cache for language:', selectedLang)
           cachedPrayers = await getCachedPrayersByLanguage(selectedLang) || []
-          console.log('📦 Found cached prayers:', cachedPrayers.length)
         } catch (cacheError) {
-          console.warn('❌ Cache access failed:', cacheError)
+          console.warn('Cache access failed:', cacheError)
           cachedPrayers = []
         }
         
         if (cachedPrayers && Array.isArray(cachedPrayers) && cachedPrayers.length > 0) {
-          console.log('✅ Using cached data immediately - converting to PrayerEntry format')
           // Use cached data immediately - convert cached data to PrayerEntry format
           const prayers: PrayerEntry[] = cachedPrayers.map(cached => {
             return {
@@ -197,22 +189,14 @@ function PrayerApp() {
           
           // Build tag mapping from cached data
           buildTagMapping(prayers)
-          
-          console.log('✅ Loaded prayers from cache:', prayers.length)
-        } else {
-          console.log('📭 No cached prayers found, will need to fetch from network')
         }
 
         // Check network connectivity before attempting fresh fetch
-        const isOnline = navigator.onLine
-        console.log('🌐 Network status:', isOnline ? 'ONLINE' : 'OFFLINE')
-        
+        const isOnline = navigator.onLine        
         const needsRefresh = cachedPrayers.length === 0 || await prayerCache.needsRefresh()
-        console.log('🔄 Needs refresh:', needsRefresh)
         
         if (needsRefresh && isOnline) {
           try {
-            console.log('🌐 Attempting to fetch fresh prayers from API...')
             const res = await fetch(`/api/prayers?lang=${selectedLang}`)
             
             if (!res.ok) {
@@ -223,13 +207,10 @@ function PrayerApp() {
             
             if (data.items && Array.isArray(data.items)) {
               const freshPrayers: PrayerEntry[] = data.items
-              console.log('🌐 Received fresh prayers from API:', freshPrayers.length)
               setFilteredPrayers(freshPrayers)
               
               // Cache the fresh data
-              console.log('💾 Caching fresh prayers...')
               await cachePrayers(freshPrayers, selectedLang)
-              console.log('✅ Prayers cached successfully')
               
               // Update cache metadata
               await prayerCache.updateMetadata({
@@ -241,12 +222,11 @@ function PrayerApp() {
               // Update cache stats
               const stats = await getCacheStats()
               setCacheStats(stats)
-              console.log('📊 Updated cache stats:', stats)
               
               // Build tag mapping from fresh data
               buildTagMapping(freshPrayers, data.tags)
             } else {
-              console.warn('⚠️ API response missing items array:', data)
+              console.warn('API response missing items array:', data)
             }
           } catch (networkError) {
             console.warn('Network request failed, using cached data:', networkError)
@@ -368,44 +348,6 @@ function PrayerApp() {
     }
   }, [selectedLang])
 
-  // Debug function - expose to window for manual testing
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // @ts-expect-error - Adding debug functions to window for testing
-      window.debugPrayerCache = {
-        checkCache: async () => {
-          const stats = await getCacheStats()
-          console.log('📊 Cache Stats:', stats)
-          const cached = await getCachedPrayersByLanguage(selectedLang)
-          console.log('📦 Cached prayers for', selectedLang, ':', cached)
-          return { stats, cached }
-        },
-        clearCache: async () => {
-          await prayerCache.clearCache()
-          console.log('🗑️ Cache cleared')
-        },
-        testCache: async () => {
-          console.log('🧪 Testing cache functionality...')
-          // Test if we can write and read from cache
-          const testPrayer = {
-            sys: { id: 'test-id' },
-            fields: {
-              title: 'Test Prayer',
-              slug: 'test-prayer',
-              body: 'Test content'
-            },
-            metadata: {}
-          } as unknown as PrayerEntry
-          
-          await cachePrayer(testPrayer, selectedLang)
-          const retrieved = await getCachedPrayer('test-prayer', selectedLang)
-          console.log('🧪 Test result:', retrieved)
-          return retrieved
-        }
-      }
-    }
-  }, [selectedLang])
-
   // Get language from localStorage on startup
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -422,9 +364,6 @@ function PrayerApp() {
       const cachedPrayer = await getCachedPrayer(slug, selectedLang)
       
       if (cachedPrayer) {
-        console.log('Using cached prayer:', cachedPrayer)
-        console.log('Cached prayer body:', cachedPrayer.body)
-        
         // Convert cached prayer to PrayerEntry format
         const prayerEntry: PrayerEntry = {
           sys: cachedPrayer.sys,
@@ -436,9 +375,6 @@ function PrayerApp() {
           metadata: cachedPrayer.metadata || {}
         } as unknown as PrayerEntry;
         
-        console.log('Converted prayer entry:', prayerEntry)
-        console.log('Prayer entry body:', prayerEntry.fields.body)
-        
         return prayerEntry
       }
       
@@ -449,8 +385,6 @@ function PrayerApp() {
       })
       
       if (prayerFromList) {
-        console.log('Using prayer from current list:', prayerFromList)
-        
         // Cache it for future use
         try {
           await cachePrayer(prayerFromList, selectedLang)
@@ -470,10 +404,6 @@ function PrayerApp() {
         
         const data = await res.json()
         const prayer = data.prayer || null
-        
-        console.log('Fetched prayer data:', prayer)
-        console.log('Prayer fields:', prayer?.fields)
-        console.log('Prayer body:', prayer?.fields?.body)
         
         if (prayer) {
           // Cache the prayer for future use
@@ -515,7 +445,6 @@ function PrayerApp() {
       })
       
       if (prayerFromList) {
-        console.log('Using prayer from list as final fallback:', prayerFromList)
         return prayerFromList
       }
       
@@ -862,24 +791,16 @@ function PrayerApp() {
                     </h1>
                     <div className="content">
                       {(() => {
-                        console.log('selectedPrayer:', selectedPrayer)
-                        console.log('selectedPrayer.fields:', selectedPrayer?.fields)
-                        console.log('selectedPrayer.fields.body:', selectedPrayer?.fields?.body)
-                        console.log('typeof body:', typeof selectedPrayer?.fields?.body)
-                        
                         let body = selectedPrayer?.fields?.body
                         
                         if (!body) {
-                          console.log('No body found')
                           return <p>No content available for this prayer.</p>
                         }
                         
                         // Handle both string (from cache) and object (from API) formats
                         if (typeof body === 'string') {
                           try {
-                            console.log('Body is string, parsing JSON...')
                             body = JSON.parse(body)
-                            console.log('Parsed body:', body)
                           } catch (parseError) {
                             console.error('Failed to parse body JSON:', parseError)
                             return <p>Content format is corrupted.</p>
@@ -887,16 +808,13 @@ function PrayerApp() {
                         }
                         
                         if (typeof body !== 'object' || !body) {
-                          console.log('Body is not an object after parsing, type:', typeof body)
                           return <p>Content format is not supported.</p>
                         }
                         
                         try {
-                          console.log('Attempting to render document:', body)
                           return documentToReactComponents(body as Document, richTextOptions)
                         } catch (error) {
                           console.error('Error rendering prayer content:', error)
-                          console.error('Prayer content that failed:', body)
                           return <p>Unable to display prayer content. Please try again.</p>
                         }
                       })()}

@@ -21,7 +21,6 @@ export const usePWA = () => {
           });
           
           setSwRegistration(registration);
-          console.log('SW registered successfully:', registration);
           
           // Force immediate activation of new service worker
           if (registration.waiting) {
@@ -35,11 +34,8 @@ export const usePWA = () => {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed') {
                   if (navigator.serviceWorker.controller) {
-                    console.log('New service worker available, will refresh');
                     // Auto-refresh to use new service worker
                     window.location.reload();
-                  } else {
-                    console.log('Service worker installed for the first time');
                   }
                 }
               });
@@ -83,7 +79,6 @@ export const usePWA = () => {
     // Listen for app installation
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
-      console.log('PWA was installed successfully');
     });
 
     return () => {
