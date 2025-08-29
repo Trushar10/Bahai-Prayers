@@ -122,8 +122,6 @@ registerRoute(
 
 // Install event - cache essential resources immediately
 self.addEventListener('install', (event) => {
-	console.log('Service Worker installing...');
-
 	// Cache essential pages immediately and aggressively
 	event.waitUntil(
 		Promise.all([
@@ -153,7 +151,6 @@ self.addEventListener('install', (event) => {
 
 // Activate event - take control immediately and clean old caches
 self.addEventListener('activate', (event) => {
-	console.log('Service Worker activating...');
 	event.waitUntil(
 		Promise.all([
 			self.clients.claim(),
@@ -166,14 +163,12 @@ self.addEventListener('activate', (event) => {
 							cacheName.includes('pages-cache') &&
 							!cacheName.includes(CACHE_VERSION)
 						) {
-							console.log('Deleting old cache:', cacheName);
 							return caches.delete(cacheName);
 						}
 						if (
 							cacheName.includes('essential-cache') &&
 							!cacheName.includes(CACHE_VERSION)
 						) {
-							console.log('Deleting old cache:', cacheName);
 							return caches.delete(cacheName);
 						}
 						return null;
@@ -229,16 +224,10 @@ self.addEventListener('fetch', (event) => {
 					return response;
 				})
 				.catch(async () => {
-					console.log(
-						'Offline - serving from cache for:',
-						event.request.url
-					);
-
 					// Try multiple cache strategies when offline
 					// 1. Try exact URL match in pages cache
 					let cachedResponse = await caches.match(event.request);
 					if (cachedResponse) {
-						console.log('Found exact match in cache');
 						return cachedResponse;
 					}
 
@@ -251,7 +240,6 @@ self.addEventListener('fetch', (event) => {
 					);
 					cachedResponse = await pagesCache.match(pathname);
 					if (cachedResponse) {
-						console.log('Found pathname match in pages cache');
 						return cachedResponse;
 					}
 
@@ -261,26 +249,22 @@ self.addEventListener('fetch', (event) => {
 					);
 					cachedResponse = await essentialCache.match('/');
 					if (cachedResponse) {
-						console.log('Serving home page from essential cache');
 						return cachedResponse;
 					}
 
 					// 4. Try any available home page
 					cachedResponse = await caches.match('/');
 					if (cachedResponse) {
-						console.log('Found home page in any cache');
 						return cachedResponse;
 					}
 
 					// 5. Try offline page
 					cachedResponse = await caches.match('/offline');
 					if (cachedResponse) {
-						console.log('Serving offline page');
 						return cachedResponse;
 					}
 
 					// 6. Last resort - inline offline response
-					console.log('Serving inline offline response');
 					return new Response(
 						`<!DOCTYPE html>
             <html>
