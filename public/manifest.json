@@ -1,38 +1,48 @@
 {
   "name": "Prayer App",
   "short_name": "Prayers",
-  "description": "A collection of prayers in multiple languages",
-  "theme_color": "#007bff",
-  "background_color": "#f9fafe",
-  "display": "standalone",
-  "orientation": "portrait",
-  "scope": "/",
+  "description": "A multilingual prayer app with offline support",
   "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafe",
+  "theme_color": "#007bff",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "productivity"],
+  "lang": "en",
+  "dir": "auto",
   "icons": [
     {
       "src": "/favicon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
       "src": "/favicon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ],
   "shortcuts": [
     {
       "name": "Browse Prayers",
-      "short_name": "Prayers",
+      "short_name": "Browse",
       "description": "Browse all available prayers",
       "url": "/",
       "icons": [
         {
           "src": "/favicon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }
   ],
-  "categories": ["lifestyle", "utilities"]
+  "prefer_related_applications": false,
+  "scope": "/",
+  "id": "/",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

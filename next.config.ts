@@ -3,13 +3,11 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
-  // Exclude problematic files from precaching
-  buildExcludes: [
-    /app-build-manifest\.json$/,
-    /_buildManifest\.js$/,
-    /_ssgManifest\.js$/,
-    /dynamic-css-manifest\.json$/
-  ],
+  fallbacks: {
+    document: '/offline.html'
+  },
+  // Fix workbox precaching issues
+  buildExcludes: [/middleware-manifest\.json$/, /build-manifest\.json$/, /dynamic-css-manifest\.json$/],
   // Simplified runtime caching
   runtimeCaching: [
     {
@@ -31,6 +29,17 @@ const withPWA = require('next-pwa')({
         expiration: {
           maxEntries: 10,
           maxAgeSeconds: 5 * 60, // 5 minutes
+        }
+      },
+    },
+    {
+      urlPattern: /\/_next\/static\/.*/,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'next-static',
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
         }
       },
     }
