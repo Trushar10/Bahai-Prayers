@@ -10,6 +10,8 @@ interface Prayer {
     title: string
     slug: string
     body: unknown
+  }
+  metadata?: {
     tags?: Array<{ sys: { id: string } }>
   }
 }
@@ -28,7 +30,6 @@ export default function Home() {
   const [prayers, setPrayers] = useState<Prayer[]>([])
   const [selectedLang, setSelectedLang] = useState('en')
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
-  const [selectedTag, setSelectedTag] = useState('all')
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
 
@@ -106,13 +107,16 @@ export default function Home() {
 
   // Filter prayers by tag
   const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
-    if (!prayer.fields.tags || prayer.fields.tags.length === 0) {
+    // Get tags from metadata.tags (not fields.tags)
+    const prayerTags = prayer.metadata?.tags || [];
+    
+    if (prayerTags.length === 0) {
       if (!acc['Other']) acc['Other'] = []
       acc['Other'].push(prayer)
       return acc
     }
 
-    prayer.fields.tags.forEach((tagRef: { sys: { id: string } }) => {
+    prayerTags.forEach((tagRef: { sys: { id: string } }) => {
       const tagId = tagRef.sys.id
       const tagName = tagMapping[tagId] || tagId
       
@@ -122,6 +126,16 @@ export default function Home() {
 
     return acc
   }, {} as GroupedPrayers)
+
+  // Sort grouped prayers to put "Obligatory" first
+  const sortedGroupedPrayers = Object.entries(groupedPrayers).sort(([tagNameA], [tagNameB]) => {
+    // "Obligatory" should come first
+    if (tagNameA.toLowerCase().includes('obligatory')) return -1
+    if (tagNameB.toLowerCase().includes('obligatory')) return 1
+    
+    // Then sort alphabetically for other categories
+    return tagNameA.localeCompare(tagNameB)
+  })
 
   const cleanUrlSlug = (text: string): string => {
     return text.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
@@ -186,11 +200,20 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="app-container">
+      {/* Main Container */}
+      <div className="container">
         {/* Header */}
-        <header className="app-header">
+        <div className="header">
           <div className="header-content">
-            <h1 className="app-title">🙏 Prayer App</h1>
+            {selectedPrayer && (
+              <button 
+                className="back-btn"
+                onClick={() => setSelectedPrayer(null)}
+              >
+                ←
+              </button>
+            )}
+            <h1 className="title">🙏 Prayer App</h1>
             <div className="header-controls">
               <LanguageToggle 
                 languages={[
@@ -203,87 +226,48 @@ export default function Home() {
               />
             </div>
           </div>
-        </header>
+        </div>
 
-        {/* Main Content */}
-        <main className="main-content">
-          {selectedPrayer ? (
-            /* Prayer Detail View */
-            <div className="prayer-detail">
-              <button 
-                className="back-button"
-                onClick={() => setSelectedPrayer(null)}
-              >
-                ← Back to List
-              </button>
-              
-              <article className="prayer-content">
-                <h1 className="prayer-title">
-                  {selectedPrayer.fields.title}
-                </h1>
-                <div className="content">
-                  {renderPrayerContent(selectedPrayer.fields.body)}
+        <div className="page-container">
+          <div className="page-view">
+            {selectedPrayer ? (
+              /* Single Post View */
+              <div className="single-post" style={{ display: 'block' }}>
+                <div className="post-content">
+                  <h1>{selectedPrayer.fields.title}</h1>
+                  <div className="content">
+                    {renderPrayerContent(selectedPrayer.fields.body)}
+                  </div>
                 </div>
-              </article>
-            </div>
-          ) : (
-            /* Prayer List View */
-            <div className="prayer-list">
-              <div className="filter-controls">
-                <select 
-                  value={selectedTag} 
-                  onChange={(e) => setSelectedTag(e.target.value)}
-                  className="tag-filter"
-                >
-                  <option value="all">All Categories</option>
-                  {Object.keys(groupedPrayers).map(tagName => (
-                    <option key={tagName} value={tagName}>{tagName}</option>
-                  ))}
-                </select>
               </div>
-
-              {selectedTag === 'all' ? (
-                /* Show all grouped prayers */
-                Object.entries(groupedPrayers).map(([tagName, prayersInGroup]) => (
-                  <div key={tagName} className="prayer-group">
-                    <h2 className="group-title">{tagName}</h2>
-                    <div className="prayer-cards">
+            ) : (
+              /* Homepage View */
+              <div className="homepage">
+                {/* Show all grouped prayers by sections */}
+                {sortedGroupedPrayers.map(([tagName, prayersInGroup]) => (
+                  <div key={tagName} className="prayer-section">
+                    <h2 className="section-title">{tagName}</h2>
+                    <div className="post-list">
                       {prayersInGroup.map((prayer) => (
                         <div
                           key={prayer.sys.id}
-                          className="prayer-card"
+                          className="post-item"
                           onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
                         >
-                          <h3 className="prayer-card-title">{prayer.fields.title}</h3>
+                          <h3>{prayer.fields.title}</h3>
                         </div>
                       ))}
                     </div>
                   </div>
-                ))
-              ) : (
-                /* Show prayers for selected tag */
-                <div className="prayer-group">
-                  <h2 className="group-title">{selectedTag}</h2>
-                  <div className="prayer-cards">
-                    {(groupedPrayers[selectedTag] || []).map((prayer) => (
-                      <div
-                        key={prayer.sys.id}
-                        className="prayer-card"
-                        onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
-                      >
-                        <h3 className="prayer-card-title">{prayer.fields.title}</h3>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </main>
-
-        {/* Theme Toggle */}
-        <ThemeToggle className="theme-toggle-fixed" />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Theme Toggle */}
+      <ThemeToggle className="theme-toggle-fixed" />
     </>
   )
 }
