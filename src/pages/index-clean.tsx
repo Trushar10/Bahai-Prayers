@@ -9,7 +9,7 @@ interface Prayer {
   fields: {
     title: string
     slug: string
-    body: unknown
+    body: any
     tags?: Array<{ sys: { id: string } }>
   }
 }
@@ -112,7 +112,7 @@ export default function Home() {
       return acc
     }
 
-    prayer.fields.tags.forEach((tagRef: { sys: { id: string } }) => {
+    prayer.fields.tags.forEach((tagRef: any) => {
       const tagId = tagRef.sys.id
       const tagName = tagMapping[tagId] || tagId
       
@@ -127,7 +127,7 @@ export default function Home() {
     return text.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
   }
 
-  const renderPrayerContent = (body: unknown) => {
+  const renderPrayerContent = (body: any) => {
     if (!body) {
       return <p>No content available for this prayer.</p>
     }
@@ -143,13 +143,12 @@ export default function Home() {
     }
 
     // Simple content rendering - just display as text for now
-    if (body && typeof body === 'object' && body !== null && 'content' in body) {
-      const bodyObj = body as { content: Array<{ nodeType: string; content?: Array<{ value?: string }> }> }
-      return bodyObj.content.map((node, index: number) => {
+    if (body && body.content) {
+      return body.content.map((node: any, index: number) => {
         if (node.nodeType === 'paragraph' && node.content) {
           return (
             <p key={index}>
-              {node.content.map((textNode, textIndex: number) => (
+              {node.content.map((textNode: any, textIndex: number) => (
                 <span key={textIndex}>{textNode.value || ''}</span>
               ))}
             </p>

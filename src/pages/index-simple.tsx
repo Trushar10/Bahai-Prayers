@@ -1,39 +1,52 @@
 import Head from 'next/head'
 import { useEffect, useState } from 'react';
+import { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
+import { Document } from '@contentful/rich-text-types'
+import { documentToReactComponents, Options } from '@contentful/rich-text-react-renderer'
+import { BLOCKS } from '@contentful/rich-text-types'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 
-// Simplified prayer type
-interface Prayer {
-  sys: { id: string }
-  fields: {
-    title: string
-    slug: string
-    body: unknown
-    tags?: Array<{ sys: { id: string } }>
-  }
+// Prayer entry type
+type PrayerEntryFields = {
+  title: EntryFieldTypes.Text
+  slug: EntryFieldTypes.Text
+  body: Document
+  tags: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<any>>
 }
 
+type PrayerEntry = Entry<PrayerEntryFields, undefined, string>
+
 // Tag entry type
-interface TagEntry {
+type TagEntry = {
   sys: { id: string }
   name: string
 }
 
 interface GroupedPrayers {
-  [tagName: string]: Prayer[]
+  [tagName: string]: PrayerEntry[]
 }
 
 export default function Home() {
-  const [prayers, setPrayers] = useState<Prayer[]>([])
+  const [filteredPrayers, setFilteredPrayers] = useState<PrayerEntry[]>([])
   const [selectedLang, setSelectedLang] = useState('en')
-  const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
+  const [selectedPrayer, setSelectedPrayer] = useState<PrayerEntry | null>(null)
   const [selectedTag, setSelectedTag] = useState('all')
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
 
+  // Custom rich text rendering options
+  const richTextOptions: Options = {
+    renderNode: {
+      [BLOCKS.PARAGRAPH]: (node, children) => <p>{children}</p>,
+      [BLOCKS.HEADING_1]: (node, children) => <h1 className="prayer-heading">{children}</h1>,
+      [BLOCKS.HEADING_2]: (node, children) => <h2 className="prayer-heading">{children}</h2>,
+      [BLOCKS.HEADING_3]: (node, children) => <h3 className="prayer-heading">{children}</h3>,
+    },
+  }
+
   // Build tag mapping from prayers data
-  const buildTagMapping = (prayers: Prayer[], tags?: TagEntry[]) => {
+  const buildTagMapping = (prayers: PrayerEntry[], tags?: TagEntry[]) => {
     const mapping: { [key: string]: string } = {}
     
     if (tags) {
@@ -59,12 +72,14 @@ export default function Home() {
         const data = await res.json()
         
         if (data.items && Array.isArray(data.items)) {
-          setPrayers(data.items)
-          buildTagMapping(data.items, data.tags)
+          const prayers: PrayerEntry[] = data.items
+          setFilteredPrayers(prayers)
+          buildTagMapping(prayers, data.tags)
         }
       } catch (error) {
         console.error('Error fetching prayers:', error)
-        setPrayers([])
+        // Fallback to empty array on error
+        setFilteredPrayers([])
       } finally {
         setLoading(false)
       }
@@ -74,10 +89,10 @@ export default function Home() {
   }, [selectedLang])
 
   // Get prayer by slug
-  const getPrayerBySlug = async (slug: string): Promise<Prayer | null> => {
+  const getPrayerBySlug = async (slug: string): Promise<PrayerEntry | null> => {
     try {
       // First check if prayer is in current list
-      const prayerFromList = prayers.find(prayer => {
+      const prayerFromList = filteredPrayers.find(prayer => {
         const cleanSlug = prayer.fields.slug?.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
         return cleanSlug === slug
       })
@@ -105,14 +120,14 @@ export default function Home() {
   }
 
   // Filter prayers by tag
-  const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
-    if (!prayer.fields.tags || prayer.fields.tags.length === 0) {
+  const groupedPrayers: GroupedPrayers = filteredPrayers.reduce((acc, prayer) => {
+    if (!prayer.fields.tags) {
       if (!acc['Other']) acc['Other'] = []
       acc['Other'].push(prayer)
       return acc
     }
 
-    prayer.fields.tags.forEach((tagRef: { sys: { id: string } }) => {
+    prayer.fields.tags.forEach((tagRef: any) => {
       const tagId = tagRef.sys.id
       const tagName = tagMapping[tagId] || tagId
       
@@ -127,52 +142,11 @@ export default function Home() {
     return text.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
   }
 
-  const renderPrayerContent = (body: unknown) => {
-    if (!body) {
-      return <p>No content available for this prayer.</p>
-    }
-
-    // Handle both string and object formats
-    if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body)
-      } catch (parseError) {
-        console.error('Failed to parse body JSON:', parseError)
-        return <p>Content format is corrupted.</p>
-      }
-    }
-
-    // Simple content rendering - just display as text for now
-    if (body && typeof body === 'object' && body !== null && 'content' in body) {
-      const bodyObj = body as { content: Array<{ nodeType: string; content?: Array<{ value?: string }> }> }
-      return bodyObj.content.map((node, index: number) => {
-        if (node.nodeType === 'paragraph' && node.content) {
-          return (
-            <p key={index}>
-              {node.content.map((textNode, textIndex: number) => (
-                <span key={textIndex}>{textNode.value || ''}</span>
-              ))}
-            </p>
-          )
-        }
-        return <div key={index}>{JSON.stringify(node)}</div>
-      })
-    }
-
-    return <p>Unable to display prayer content.</p>
-  }
-
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh',
-        gap: '1rem'
-      }}>
-        <div>Loading prayers...</div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading prayers...</p>
       </div>
     )
   }
@@ -193,13 +167,8 @@ export default function Home() {
             <h1 className="app-title">🙏 Prayer App</h1>
             <div className="header-controls">
               <LanguageToggle 
-                languages={[
-                  { code: 'en', name: 'English' },
-                  { code: 'hi', name: 'हिन्दी' },
-                  { code: 'gu', name: 'ગુજરાતી' }
-                ]}
                 currentLang={selectedLang}
-                onChange={setSelectedLang}
+                onLanguageChange={setSelectedLang}
               />
             </div>
           </div>
@@ -222,7 +191,34 @@ export default function Home() {
                   {selectedPrayer.fields.title}
                 </h1>
                 <div className="content">
-                  {renderPrayerContent(selectedPrayer.fields.body)}
+                  {(() => {
+                    let body = selectedPrayer?.fields?.body
+
+                    if (!body) {
+                      return <p>No content available for this prayer.</p>
+                    }
+
+                    // Handle both string (from cache) and object (from API) formats
+                    if (typeof body === 'string') {
+                      try {
+                        body = JSON.parse(body)
+                      } catch (parseError) {
+                        console.error('Failed to parse body JSON:', parseError)
+                        return <p>Content format is corrupted.</p>
+                      }
+                    }
+
+                    if (typeof body !== 'object' || !body) {
+                      return <p>Content format is not supported.</p>
+                    }
+
+                    try {
+                      return documentToReactComponents(body as Document, richTextOptions)
+                    } catch (error) {
+                      console.error('Error rendering prayer content:', error)
+                      return <p>Unable to display prayer content. Please try again.</p>
+                    }
+                  })()}
                 </div>
               </article>
             </div>
@@ -244,11 +240,11 @@ export default function Home() {
 
               {selectedTag === 'all' ? (
                 /* Show all grouped prayers */
-                Object.entries(groupedPrayers).map(([tagName, prayersInGroup]) => (
+                Object.entries(groupedPrayers).map(([tagName, prayers]) => (
                   <div key={tagName} className="prayer-group">
                     <h2 className="group-title">{tagName}</h2>
                     <div className="prayer-cards">
-                      {prayersInGroup.map((prayer) => (
+                      {prayers.map((prayer) => (
                         <div
                           key={prayer.sys.id}
                           className="prayer-card"
