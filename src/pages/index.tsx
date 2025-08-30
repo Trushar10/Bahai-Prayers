@@ -2,6 +2,10 @@ import Head from 'next/head'
 import { useEffect, useState } from 'react';
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
+import OfflineIndicator from '../components/OfflineIndicator'
+// import InstallPrompt from '../components/InstallPrompt'
+// import { usePWA } from '../hooks/usePWA'
+// import { dbService } from '../services/indexedDBService'
 
 // Simplified prayer type
 interface Prayer {
@@ -32,6 +36,14 @@ export default function Home() {
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
+  
+  // Mock PWA status
+  const isOnline = true
+  const syncStatus = {
+    lastSync: new Date(),
+    nextSync: null,
+    failedAttempts: 0
+  }
 
   // Build tag mapping from prayers data
   const buildTagMapping = (prayers: Prayer[], tags?: TagEntry[]) => {
@@ -46,7 +58,7 @@ export default function Home() {
     setTagMapping(mapping)
   }
 
-  // Fetch prayers
+  // Fetch prayers (simplified - no caching for now)
   useEffect(() => {
     const fetchPrayers = async () => {
       try {
@@ -74,7 +86,7 @@ export default function Home() {
     fetchPrayers()
   }, [selectedLang])
 
-  // Get prayer by slug
+  // Get prayer by slug (simplified)
   const getPrayerBySlug = async (slug: string): Promise<Prayer | null> => {
     try {
       // First check if prayer is in current list
@@ -87,21 +99,27 @@ export default function Home() {
         return prayerFromList
       }
       
-      // If not found, fetch from API
+      // Try to fetch from API
       const res = await fetch(`/api/prayer/${slug}?lang=${selectedLang}`)
-      const data = await res.json()
-      return data.prayer || null
+      if (res.ok) {
+        const data = await res.json()
+        return data.prayer || null
+      }
+      
+      return null
     } catch (error) {
       console.error('Error fetching prayer:', error)
       return null
     }
   }
 
-  // Handle prayer selection
+  // Handle prayer selection (simplified)
   const handlePrayerClick = async (slug: string) => {
     const prayer = await getPrayerBySlug(slug)
     if (prayer) {
       setSelectedPrayer(prayer)
+      // Log user interaction could go here
+      console.log('Prayer viewed:', prayer.sys.id)
     }
   }
 
@@ -214,17 +232,21 @@ export default function Home() {
               </button>
             )}
             <h1 className="title">🙏 Prayer App</h1>
-            <div className="header-controls">
-              <LanguageToggle 
-                languages={[
-                  { code: 'en', name: 'English' },
-                  { code: 'hi', name: 'हिन्दी' },
-                  { code: 'gu', name: 'ગુજરાતી' }
-                ]}
-                currentLang={selectedLang}
-                onChange={setSelectedLang}
-              />
-            </div>
+                      <div className="header-controls">
+            <OfflineIndicator 
+              isOnline={isOnline}
+              syncStatus={syncStatus}
+            />
+            <LanguageToggle 
+              languages={[
+                { code: 'en', name: 'English' },
+                { code: 'hi', name: 'हिन्दी' },
+                { code: 'gu', name: 'ગુજરાતી' }
+              ]}
+              currentLang={selectedLang}
+              onChange={setSelectedLang}
+            />
+          </div>
           </div>
         </div>
 
@@ -268,6 +290,13 @@ export default function Home() {
 
       {/* Theme Toggle */}
       <ThemeToggle className="theme-toggle-fixed" />
+      
+      {/* PWA Install Prompt - Disabled for now */}
+      {/* <InstallPrompt
+        isInstallable={isInstallable}
+        isInstalled={isInstalled}
+        onInstall={installApp}
+      /> */}
     </>
   )
 }
