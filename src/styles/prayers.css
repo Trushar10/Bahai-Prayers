@@ -439,7 +439,7 @@ body {
 		min-height: calc(100vh - 0px);
 		margin: 0;
 		border: none;
-		border-radius: none;
+		border-radius: 0px;
 	}
 
 	.navbar {

@@ -1,7 +1,7 @@
 import '../styles/prayers.css'
 import type { AppProps } from 'next/app'
 import { Rasa } from 'next/font/google'
-import { SpeedInsights } from "@vercel/speed-insights/next"
+// import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useEffect } from 'react'
 
 const rasa = Rasa({
@@ -45,7 +45,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <main className={rasa.className}>
       <Component {...pageProps} />
-      <SpeedInsights />
+      {/* <SpeedInsights /> */}
     </main>
   )
 }
