@@ -1,11 +1,8 @@
 import Head from 'next/head'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import OfflineIndicator from '../components/OfflineIndicator'
-// import InstallPrompt from '../components/InstallPrompt'
-// import { usePWA } from '../hooks/usePWA'
-// import { dbService } from '../services/indexedDBService'
 
 // Simplified prayer type
 interface Prayer {
@@ -36,9 +33,24 @@ export default function Home() {
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
+  const [isOnline, setIsOnline] = useState(true)
   
-  // Mock PWA status
-  const isOnline = true
+  // Online/offline status detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    
+    setIsOnline(navigator.onLine)
+    
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+  
   const syncStatus = {
     lastSync: new Date(),
     nextSync: null,
@@ -46,7 +58,7 @@ export default function Home() {
   }
 
   // Build tag mapping from prayers data
-  const buildTagMapping = (prayers: Prayer[], tags?: TagEntry[]) => {
+  const buildTagMapping = useCallback((prayers: Prayer[], tags?: TagEntry[]) => {
     const mapping: { [key: string]: string } = {}
     
     if (tags) {
@@ -56,13 +68,52 @@ export default function Home() {
     }
     
     setTagMapping(mapping)
-  }
+  }, [])
 
-  // Fetch prayers (simplified - no caching for now)
+  // Simple offline cache using localStorage
+  const getCachedPrayers = useCallback((lang: string): { items: Prayer[], tags?: TagEntry[] } | null => {
+    try {
+      const cached = localStorage.getItem(`prayers_${lang}`)
+      if (cached) {
+        const parsedData = JSON.parse(cached)
+        // Check if cache is not too old (24 hours)
+        const maxAge = 24 * 60 * 60 * 1000 // 24 hours
+        const age = Date.now() - parsedData.timestamp
+        if (age < maxAge) {
+          return parsedData.data
+        } else {
+          localStorage.removeItem(`prayers_${lang}`)
+        }
+      }
+    } catch (error) {
+      console.error('Error reading cached prayers:', error)
+    }
+    return null
+  }, [])
+
+  const setCachedPrayers = useCallback((lang: string, data: { items: Prayer[], tags?: TagEntry[] }) => {
+    try {
+      localStorage.setItem(`prayers_${lang}`, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }))
+    } catch (error) {
+      console.error('Error caching prayers:', error)
+    }
+  }, [])
+
+  // Fetch prayers with offline fallback
   useEffect(() => {
     const fetchPrayers = async () => {
       try {
         setLoading(true)
+        
+        // Check if we're offline first
+        if (!isOnline || !navigator.onLine) {
+          throw new Error('Device is offline')
+        }
+        
+        // Try to fetch from API
         const res = await fetch(`/api/prayers?lang=${selectedLang}`)
         
         if (!res.ok) {
@@ -74,20 +125,31 @@ export default function Home() {
         if (data.items && Array.isArray(data.items)) {
           setPrayers(data.items)
           buildTagMapping(data.items, data.tags)
+          
+          // Cache the successful response
+          setCachedPrayers(selectedLang, data)
         }
       } catch (error) {
         console.error('Error fetching prayers:', error)
-        setPrayers([])
+        
+        // Try to use cached data when offline or on error
+        const cachedData = getCachedPrayers(selectedLang)
+        if (cachedData && cachedData.items) {
+          setPrayers(cachedData.items)
+          buildTagMapping(cachedData.items, cachedData.tags)
+        } else {
+          setPrayers([])
+        }
       } finally {
         setLoading(false)
       }
     }
 
     fetchPrayers()
-  }, [selectedLang])
+  }, [selectedLang, buildTagMapping, getCachedPrayers, setCachedPrayers, isOnline])
 
-  // Get prayer by slug (simplified)
-  const getPrayerBySlug = async (slug: string): Promise<Prayer | null> => {
+  // Get prayer by slug with offline fallback
+  const getPrayerBySlug = useCallback(async (slug: string): Promise<Prayer | null> => {
     try {
       // First check if prayer is in current list
       const prayerFromList = prayers.find(prayer => {
@@ -106,60 +168,91 @@ export default function Home() {
         return data.prayer || null
       }
       
+      // If API fails, search in cached data
+      const cachedData = getCachedPrayers(selectedLang)
+      if (cachedData && cachedData.items) {
+        const cachedPrayer = cachedData.items.find(prayer => {
+          const cleanSlug = prayer.fields.slug?.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
+          return cleanSlug === slug
+        })
+        if (cachedPrayer) {
+          console.log('Using cached prayer for offline mode')
+          return cachedPrayer
+        }
+      }
+      
       return null
     } catch (error) {
       console.error('Error fetching prayer:', error)
+      
+      // Fallback to cached data on error
+      const cachedData = getCachedPrayers(selectedLang)
+      if (cachedData && cachedData.items) {
+        const cachedPrayer = cachedData.items.find(prayer => {
+          const cleanSlug = prayer.fields.slug?.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
+          return cleanSlug === slug
+        })
+        if (cachedPrayer) {
+          console.log('Using cached prayer for offline mode')
+          return cachedPrayer
+        }
+      }
+      
       return null
     }
-  }
+  }, [prayers, selectedLang, getCachedPrayers])
 
   // Handle prayer selection (simplified)
-  const handlePrayerClick = async (slug: string) => {
+  const handlePrayerClick = useCallback(async (slug: string) => {
     const prayer = await getPrayerBySlug(slug)
     if (prayer) {
       setSelectedPrayer(prayer)
       // Log user interaction could go here
       console.log('Prayer viewed:', prayer.sys.id)
     }
-  }
+  }, [getPrayerBySlug])
 
-  // Filter prayers by tag
-  const groupedPrayers: GroupedPrayers = prayers.reduce((acc, prayer) => {
-    // Get tags from metadata.tags (not fields.tags)
-    const prayerTags = prayer.metadata?.tags || [];
-    
-    if (prayerTags.length === 0) {
-      if (!acc['Other']) acc['Other'] = []
-      acc['Other'].push(prayer)
-      return acc
-    }
-
-    prayerTags.forEach((tagRef: { sys: { id: string } }) => {
-      const tagId = tagRef.sys.id
-      const tagName = tagMapping[tagId] || tagId
+  // Filter prayers by tag (memoized)
+  const groupedPrayers: GroupedPrayers = useMemo(() => {
+    return prayers.reduce((acc, prayer) => {
+      // Get tags from metadata.tags (not fields.tags)
+      const prayerTags = prayer.metadata?.tags || [];
       
-      if (!acc[tagName]) acc[tagName] = []
-      acc[tagName].push(prayer)
+      if (prayerTags.length === 0) {
+        if (!acc['Other']) acc['Other'] = []
+        acc['Other'].push(prayer)
+        return acc
+      }
+
+      prayerTags.forEach((tagRef: { sys: { id: string } }) => {
+        const tagId = tagRef.sys.id
+        const tagName = tagMapping[tagId] || tagId
+        
+        if (!acc[tagName]) acc[tagName] = []
+        acc[tagName].push(prayer)
+      })
+
+      return acc
+    }, {} as GroupedPrayers)
+  }, [prayers, tagMapping])
+
+  // Sort grouped prayers to put "Obligatory" first (memoized)
+  const sortedGroupedPrayers = useMemo(() => {
+    return Object.entries(groupedPrayers).sort(([tagNameA], [tagNameB]) => {
+      // "Obligatory" should come first
+      if (tagNameA.toLowerCase().includes('obligatory')) return -1
+      if (tagNameB.toLowerCase().includes('obligatory')) return 1
+      
+      // Then sort alphabetically for other categories
+      return tagNameA.localeCompare(tagNameB)
     })
+  }, [groupedPrayers])
 
-    return acc
-  }, {} as GroupedPrayers)
-
-  // Sort grouped prayers to put "Obligatory" first
-  const sortedGroupedPrayers = Object.entries(groupedPrayers).sort(([tagNameA], [tagNameB]) => {
-    // "Obligatory" should come first
-    if (tagNameA.toLowerCase().includes('obligatory')) return -1
-    if (tagNameB.toLowerCase().includes('obligatory')) return 1
-    
-    // Then sort alphabetically for other categories
-    return tagNameA.localeCompare(tagNameB)
-  })
-
-  const cleanUrlSlug = (text: string): string => {
+  const cleanUrlSlug = useCallback((text: string): string => {
     return text.trim().toLowerCase().replace(/\s+/g, '-').replace(/\-\-+/g, '-')
-  }
+  }, [])
 
-  const renderPrayerContent = (body: unknown) => {
+  const renderPrayerContent = useCallback((body: unknown) => {
     if (!body) {
       return <p>No content available for this prayer.</p>
     }
@@ -192,7 +285,7 @@ export default function Home() {
     }
 
     return <p>Unable to display prayer content.</p>
-  }
+  }, []) // Empty dependency array for renderPrayerContent
 
   if (loading) {
     return (
@@ -290,13 +383,6 @@ export default function Home() {
 
       {/* Theme Toggle */}
       <ThemeToggle className="theme-toggle-fixed" />
-      
-      {/* PWA Install Prompt - Disabled for now */}
-      {/* <InstallPrompt
-        isInstallable={isInstallable}
-        isInstalled={isInstalled}
-        onInstall={installApp}
-      /> */}
     </>
   )
 }

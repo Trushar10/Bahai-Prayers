@@ -8,23 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "generate-icons": "node scripts/generate-pwa-icons.js",
-    "pwa:analyze": "npx workbox-cli wizard",
     "clean:cache": "rm -rf .next/cache && rm -rf public/sw.js* && rm -rf public/workbox-*"
   },
   "dependencies": {
     "@contentful/rich-text-react-renderer": "^16.1.0",
-    "@vercel/speed-insights": "^1.2.0",
     "contentful": "^11.7.15",
     "next": "15.4.6",
     "next-pwa": "^5.6.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "workbox-background-sync": "^7.3.0",
-    "workbox-precaching": "^7.3.0",
-    "workbox-routing": "^7.3.0",
-    "workbox-strategies": "^7.3.0",
-    "workbox-webpack-plugin": "^7.3.0",
-    "workbox-window": "^7.3.0"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

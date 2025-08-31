@@ -29,8 +29,26 @@ export default function App({ Component, pageProps }: AppProps) {
     window.addEventListener('error', handleGlobalError);
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    // Manual PWA service worker registration
-    if ('serviceWorker' in navigator) {
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []); // Empty dependency array
+
+  // Service worker management in a separate effect
+  useEffect(() => {
+    // Unregister existing service workers in development
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'development') {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          console.log('Unregistering service worker in development mode');
+          registration.unregister();
+        }
+      });
+    }
+
+    // Manual PWA service worker registration (only in production)
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       }).then((registration) => {
@@ -59,13 +77,10 @@ export default function App({ Component, pageProps }: AppProps) {
         console.log('Service worker controller changed');
         // Optionally reload the page to ensure the new SW is used
       });
+    } else if (process.env.NODE_ENV === 'development') {
+      console.log('Service Worker registration skipped in development mode');
     }
-
-    return () => {
-      window.removeEventListener('error', handleGlobalError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
-  }, []);
+  }, []); // Empty dependency array for service worker effect
 
   return (
     <main className={rasa.className}>
