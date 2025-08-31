@@ -40,7 +40,7 @@ export default function App({ Component, pageProps }: AppProps) {
     // Unregister existing service workers in development
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'development') {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
+        for(const registration of registrations) {
           console.log('Unregistering service worker in development mode');
           registration.unregister();
         }
