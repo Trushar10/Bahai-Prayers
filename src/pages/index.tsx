@@ -119,7 +119,7 @@ export default function Home() {
         }
       }
     } catch (error) {
-      console.error('Error reading cached prayers:', error)
+      // Silent error - cache read failed
     }
     return null
   }, [])
@@ -131,7 +131,7 @@ export default function Home() {
         timestamp: Date.now()
       }))
     } catch (error) {
-      console.error('Error caching prayers:', error)
+      // Silent error - cache write failed
     }
   }, [])
 
@@ -158,8 +158,6 @@ export default function Home() {
           setCachedPrayers(selectedLang, data)
         }
       } catch (error) {
-        console.error('Error fetching prayers:', error)
-        
         // Try to use cached data when offline or on error
         const cachedData = getCachedPrayers(selectedLang)
         if (cachedData && cachedData.items) {
@@ -204,15 +202,12 @@ export default function Home() {
           return cleanSlug === slug
         })
         if (cachedPrayer) {
-          console.log('Using cached prayer for offline mode')
           return cachedPrayer
         }
       }
       
       return null
     } catch (error) {
-      console.error('Error fetching prayer:', error)
-      
       // Fallback to cached data on error
       const cachedData = getCachedPrayers(selectedLang)
       if (cachedData && cachedData.items) {
@@ -221,7 +216,6 @@ export default function Home() {
           return cleanSlug === slug
         })
         if (cachedPrayer) {
-          console.log('Using cached prayer for offline mode')
           return cachedPrayer
         }
       }
@@ -254,9 +248,6 @@ export default function Home() {
           setShowPost(true)
         })
       })
-      
-      // Log user interaction could go here
-      console.log('Prayer viewed:', prayer.sys.id)
     }
   }, [getPrayerBySlug])
 
@@ -310,9 +301,9 @@ export default function Home() {
     const { outcome } = await deferredPrompt.userChoice
 
     if (outcome === 'accepted') {
-      console.log('User accepted the install prompt')
+      // User accepted the install prompt
     } else {
-      console.log('User dismissed the install prompt')
+      // User dismissed the install prompt
     }
 
     // Clear the deferredPrompt
@@ -369,7 +360,6 @@ export default function Home() {
       try {
         body = JSON.parse(body)
       } catch (parseError) {
-        console.error('Failed to parse body JSON:', parseError)
         return <p>Content format is corrupted.</p>
       }
     }
@@ -443,7 +433,7 @@ export default function Home() {
                 <span>Back</span>
               </button>
             )}
-            <h1 className="title">🙏 Prayer App</h1>
+            <h1 className="title">Bahá'í Prayers</h1>
                       <div className="header-controls">
             <LanguageToggle 
               languages={[

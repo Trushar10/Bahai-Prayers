@@ -7,8 +7,6 @@
 	--post-border: #f1f3f4;
 	--hover-bg: #f8f9fa;
 	--post-subtext: #374151;
-	--author-text: #6b7280;
-	--author-border: #e5e7eb;
 	--container-shadow: #e2e8f0;
 	--container-bg: #ffffff;
 	--menu-bg: #ffffff;
@@ -26,8 +24,6 @@
 	--post-border: rgb(71, 85, 105);
 	--hover-bg: #0f172a26;
 	--post-subtext: #d1d5db;
-	--author-text: #9ca3af;
-	--author-border: #444;
 	--container-shadow: #334155;
 	--container-bg: #1e293b;
 	--menu-bg: #334155;
@@ -52,8 +48,7 @@ body {
 .post-item,
 .post-item h3,
 .post-content h1,
-.post-content .content,
-.author {
+.post-content .content {
 	transition: background-color 0.4s ease, color 0.4s ease,
 		border-color 0.4s ease;
 }
@@ -95,50 +90,6 @@ body {
 	gap: 12px;
 }
 
-.install-btn {
-	padding: 8px 12px;
-	background-color: #007bff;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 14px;
-	font-weight: 500;
-	position: relative;
-	min-width: 100px;
-	overflow: hidden;
-	transition: all 0.2s ease;
-	font-family: inherit;
-}
-
-.install-btn:hover:not(:disabled) {
-	background-color: #0056b3;
-	transform: translateY(-1px);
-}
-
-.install-btn:disabled {
-	background-color: #6c757d;
-	cursor: not-allowed;
-}
-
-.offline-status {
-	font-size: 14px;
-	cursor: help;
-	animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-	0% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.5;
-	}
-	100% {
-		opacity: 1;
-	}
-}
-
 /* Feedback Link Styles */
 .feedback-container {
 	text-align: center;
@@ -169,39 +120,6 @@ body {
 
 [data-theme='dark'] .feedback-link:hover {
 	box-shadow: 0 2px 4px rgba(77, 171, 247, 0.2);
-}
-
-.cache-status {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	padding: 4px 8px;
-	background-color: var(--hover-bg);
-	border-radius: 8px;
-	font-size: 12px;
-	color: var(--post-subtext);
-	cursor: help;
-	transition: background-color 0.2s ease;
-}
-
-.cache-status:hover {
-	background-color: var(--post-border);
-}
-
-.cache-icon {
-	font-size: 10px;
-}
-
-.cache-count {
-	font-weight: 500;
-	font-size: 11px;
-}
-
-.cache-size {
-	font-weight: 400;
-	font-size: 10px;
-	opacity: 0.8;
-	margin-left: 2px;
 }
 
 /* Back button styling */
@@ -243,10 +161,6 @@ body {
 	font-size: 18px;
 	font-weight: 600;
 	color: var(--text);
-}
-
-.spacer {
-	width: 40px;
 }
 
 /* Container */
@@ -414,15 +328,6 @@ body {
 	margin-bottom: 0;
 }
 
-.author {
-	margin-top: 32px;
-	padding-top: 20px;
-	border-top: 1px solid var(--author-border);
-	font-size: 15px;
-	color: var(--author-text);
-	font-style: italic;
-}
-
 /* Theme toggle button */
 /* fixed theme toggle style (bottom-right) */
 .theme-toggle-fixed {
@@ -461,46 +366,6 @@ body {
 	cursor: pointer;
 	color: var(--link);
 	transition: all 0.2s ease;
-	animation: installPulse 2s infinite;
-}
-
-.install-btn-fixed:hover {
-	background: var(--hover-bg);
-	transform: translateY(-1px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.install-btn-fixed svg {
-	width: 32px;
-	height: 32px;
-}
-
-/* Subtle pulse animation to draw attention */
-@keyframes installPulse {
-	0%,
-	100% {
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-	}
-	50% {
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08),
-			0 0 0 4px rgba(0, 123, 255, 0.1);
-	}
-}
-
-/* Dark theme pulse animation */
-[data-theme='dark'] .install-btn-fixed {
-	animation: installPulseDark 2s infinite;
-}
-
-@keyframes installPulseDark {
-	0%,
-	100% {
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-	}
-	50% {
-		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3),
-			0 0 0 4px rgba(77, 171, 247, 0.15);
-	}
 }
 
 /* ensure language select doesn't overlap on very small screens */
@@ -510,82 +375,6 @@ body {
 		font-size: 13px !important;
 		padding: 6px !important;
 	}
-}
-
-/* Add missing classes used in your React components */
-
-/* .navbar */
-.navbar {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0 24px;
-	height: 56px;
-	background: var(--header-bg);
-	border-bottom: 1px solid var(--header-border);
-}
-
-/* .navbar-brand */
-.navbar-brand {
-	font-size: 20px;
-	font-weight: 700;
-	color: var(--text);
-}
-
-/* .navbar-actions */
-.navbar-actions {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-}
-
-/* .prayer-link */
-.prayer-link {
-	text-decoration: none;
-	color: var(--link);
-	font-weight: 500;
-	transition: color 0.2s;
-}
-.prayer-link:hover {
-	color: #0056b3;
-}
-
-/* .prayer-title */
-.prayer-title {
-	font-size: 22px;
-	font-weight: 600;
-	color: var(--text);
-}
-
-/* .theme-toggle-fixed */
-.theme-toggle-fixed {
-	position: fixed;
-	bottom: 24px;
-	right: 24px;
-	background: none;
-	border: none;
-	cursor: pointer;
-	font-size: 18px;
-	color: var(--text);
-	z-index: 1000;
-}
-
-/* .main-wrapper */
-.main-wrapper {
-	min-height: 100vh;
-	background: var(--bg);
-	display: flex;
-	flex-direction: column;
-}
-
-/* .footer */
-.footer {
-	text-align: center;
-	padding: 16px 0;
-	font-size: 14px;
-	color: var(--author-text);
-	background: var(--hover-bg);
-	border-top: 1px solid var(--header-border);
 }
 
 /* Responsive for .navbar and .main-wrapper */

@@ -14,15 +14,12 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     // Global error handler for uncaught exceptions
     const handleGlobalError = (event: ErrorEvent) => {
-      console.error('Global error caught:', event.error);
-      console.error('Error message:', event.message);
-      console.error('Error filename:', event.filename);
+      // Error logging removed for production
     };
 
     // Global error handler for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection caught:', event.reason);
-      console.error('Promise:', event.promise);
+      // Error logging removed for production
     };
 
     // Add global error listeners
@@ -41,7 +38,6 @@ export default function App({ Component, pageProps }: AppProps) {
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'development') {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for(const registration of registrations) {
-          console.log('Unregistering service worker in development mode');
           registration.unregister();
         }
       });
@@ -52,7 +48,6 @@ export default function App({ Component, pageProps }: AppProps) {
       navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       }).then((registration) => {
-        console.log('SW registered: ', registration);
         
         // Force immediate activation
         if (registration.waiting) {
@@ -62,23 +57,21 @@ export default function App({ Component, pageProps }: AppProps) {
         // Force some API requests to trigger caching
         setTimeout(() => {
           fetch('/api/prayers?lang=en').then(() => {
-            console.log('Prayers API cached');
+            // Prayers API cached
           }).catch(() => {
-            console.log('Failed to cache prayers API');
+            // Failed to cache prayers API
           });
         }, 2000);
 
       }).catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
+        // SW registration failed
       });
 
       // Listen for SW updates
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('Service worker controller changed');
+        // Service worker controller changed
         // Optionally reload the page to ensure the new SW is used
       });
-    } else if (process.env.NODE_ENV === 'development') {
-      console.log('Service Worker registration skipped in development mode');
     }
   }, []); // Empty dependency array for service worker effect
 
