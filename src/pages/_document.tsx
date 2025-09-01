@@ -9,8 +9,8 @@ export default function Document() {
         <meta name="theme-color" content="#007bff" />
         
         {/* Icons */}
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/favicon.webp" />
+        <link rel="icon" href="/Bahai-Logo.png" />
+        <link rel="apple-touch-icon" href="/Bahai-Logo.png" />
         
         {/* iOS specific PWA meta tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
