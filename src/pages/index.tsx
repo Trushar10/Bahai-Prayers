@@ -23,6 +23,12 @@ interface TagEntry {
   name: string
 }
 
+// PWA Install Prompt Event interface
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 interface GroupedPrayers {
   [tagName: string]: Prayer[]
 }
@@ -36,7 +42,7 @@ export default function Home() {
   const [isOnline, setIsOnline] = useState(true)
   const [showPost, setShowPost] = useState(false)
   const singlePostRef = useRef<HTMLDivElement>(null)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   
   // Online/offline status detection
@@ -66,7 +72,7 @@ export default function Home() {
       }
       
       // Check for iOS standalone mode
-      if ((window.navigator as any).standalone === true) {
+      if ((window.navigator as Navigator & { standalone?: boolean }).standalone === true) {
         setIsInstalled(true)
         return
       }
@@ -81,9 +87,10 @@ export default function Home() {
     checkIfInstalled()
 
     // Listen for beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
+    const handleBeforeInstallPrompt = (e: Event) => {
+      const installEvent = e as BeforeInstallPromptEvent
+      installEvent.preventDefault()
+      setDeferredPrompt(installEvent)
     }
 
     // Listen for app installed event
@@ -504,18 +511,14 @@ export default function Home() {
           title="Add to Home Screen"
         >
           <svg 
-            width="20" 
-            height="20" 
+            width="32" 
+            height="32" 
             viewBox="0 0 24 24" 
             fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7,10 12,15 17,10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
+            <rect x="7" y="3" width="10" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+            <path d="M12 9V15M12 15L10 13M12 15L14 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
       )}
