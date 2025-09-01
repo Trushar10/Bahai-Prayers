@@ -172,16 +172,24 @@ body {
 	margin-left: 2px;
 }
 
+/* Back button styling */
 .back-btn {
 	background: none;
 	border: none;
 	font-size: 16px;
 	color: var(--link);
 	cursor: pointer;
-	padding: 8px 0;
-	display: block;
+	padding: 8px 12px;
 	position: absolute;
 	left: 20px;
+	top: 50%;
+	transform: translateY(-50%);
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.back-btn:hover {
+	background-color: var(--hover-bg);
 }
 
 .title {
@@ -212,7 +220,7 @@ body {
 	height: 100%;
 	display: flex;
 	transform: translateX(0);
-	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* Animation States */
@@ -220,10 +228,30 @@ body {
 	transform: translateX(-50%);
 }
 
+/* Force scroll reset during slide */
+.page-container.slide-left .page-view:nth-child(2) {
+	/* Force the second page view (post content) to start at top */
+	overflow: hidden;
+}
+
+.page-container.slide-left .page-view:nth-child(2) .single-post {
+	/* Reset scroll during transition */
+	transform: translateY(0);
+}
+
 /* Individual Page Views */
 .page-view {
 	width: 50%;
 	flex-shrink: 0;
+	overflow-y: auto;
+	scroll-behavior: smooth;
+	/* Reset scroll position when view becomes active */
+	scroll-snap-type: y mandatory;
+}
+
+/* Ensure page views start at top when sliding */
+.page-container.slide-left .page-view:nth-child(2) {
+	scroll-behavior: auto;
 }
 
 /* Homepage */
@@ -259,11 +287,17 @@ body {
 	text-decoration: none;
 	color: var(--text);
 	cursor: pointer;
-	transition: background-color 0.2s ease;
+	transition: background-color 0.2s ease, transform 0.1s ease;
+	-webkit-tap-highlight-color: transparent;
+	user-select: none;
 }
 
 .post-item:hover {
 	background-color: var(--hover-bg);
+}
+
+.post-item:active {
+	transform: scale(0.98);
 }
 
 .post-item:last-child {
@@ -279,8 +313,36 @@ body {
 
 /* Single Post */
 .single-post {
-	display: none;
+	display: block;
 	padding: 32px 24px;
+	height: 100%;
+	overflow-y: auto;
+	scroll-behavior: smooth;
+	/* Ensure content always starts at the top */
+	scroll-padding-top: 0;
+}
+
+/* Force scroll position reset when content loads */
+.page-container.slide-left .single-post {
+	scroll-behavior: auto;
+	/* Force scroll to top during slide transition */
+	animation: resetScroll 0.1s ease;
+}
+
+@keyframes resetScroll {
+	from {
+		scroll-behavior: auto;
+	}
+	to {
+		scroll-behavior: auto;
+	}
+}
+
+/* Reset scroll position for post content */
+.single-post .post-content {
+	/* Ensure content starts at very top */
+	margin-top: 0;
+	padding-top: 0;
 }
 
 .post-content h1 {
@@ -312,21 +374,6 @@ body {
 	font-size: 15px;
 	color: var(--author-text);
 	font-style: italic;
-}
-
-/* Show/Hide states */
-.show-single-post .homepage {
-	display: none;
-}
-
-.show-single-post .single-post {
-	display: block;
-}
-
-.show-single-post .back-btn {
-	display: block;
-	position: absolute;
-	left: 20px;
 }
 
 /* Theme toggle button */
@@ -449,6 +496,18 @@ body {
 
 	.single-post {
 		padding: 32px 32px 80px;
+	}
+
+	/* Optimize slide animation for mobile */
+	.page-container {
+		transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	/* Better mobile touch handling */
+	.back-btn {
+		-webkit-tap-highlight-color: transparent;
+		padding: 12px;
+		font-size: 18px;
 	}
 }
 

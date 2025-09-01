@@ -1,5 +1,5 @@
 import Head from 'next/head'
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import OfflineIndicator from '../components/OfflineIndicator'
@@ -34,6 +34,8 @@ export default function Home() {
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
   const [isOnline, setIsOnline] = useState(true)
+  const [showPost, setShowPost] = useState(false)
+  const singlePostRef = useRef<HTMLDivElement>(null)
   
   // Online/offline status detection
   useEffect(() => {
@@ -206,11 +208,42 @@ export default function Home() {
   const handlePrayerClick = useCallback(async (slug: string) => {
     const prayer = await getPrayerBySlug(slug)
     if (prayer) {
+      // Set prayer content first
       setSelectedPrayer(prayer)
+      
+      // Reset scroll positions immediately
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      
+      // Reset the single post container scroll position
+      if (singlePostRef.current) {
+        singlePostRef.current.scrollTop = 0
+      }
+      
+      // Start slide animation after content is ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setShowPost(true)
+        })
+      })
+      
       // Log user interaction could go here
       console.log('Prayer viewed:', prayer.sys.id)
     }
   }, [getPrayerBySlug])
+
+  // Handle going back to prayer list
+  const handleBackClick = useCallback(() => {
+    setShowPost(false)
+    
+    // Clear selected prayer after slide animation completes
+    setTimeout(() => {
+      setSelectedPrayer(null)
+      // Scroll to top of prayer list after transition
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' })
+      })
+    }, 400) // Match CSS transition duration
+  }, [])
 
   // Filter prayers by tag (memoized)
   const groupedPrayers: GroupedPrayers = useMemo(() => {
@@ -319,7 +352,7 @@ export default function Home() {
             {selectedPrayer && (
               <button 
                 className="back-btn"
-                onClick={() => setSelectedPrayer(null)}
+                onClick={handleBackClick}
               >
                 ←
               </button>
@@ -343,40 +376,42 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="page-container">
+        <div className={`page-container ${showPost ? 'slide-left' : ''}`}>
           <div className="page-view">
-            {selectedPrayer ? (
-              /* Single Post View */
-              <div className="single-post" style={{ display: 'block' }}>
+            {/* Homepage View */}
+            <div className="homepage">
+              {/* Show all grouped prayers by sections */}
+              {sortedGroupedPrayers.map(([tagName, prayersInGroup]) => (
+                <div key={tagName} className="prayer-section">
+                  <h2 className="section-title">{tagName}</h2>
+                  <div className="post-list">
+                    {prayersInGroup.map((prayer) => (
+                      <div
+                        key={prayer.sys.id}
+                        className="post-item"
+                        onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
+                      >
+                        <h3>{prayer.fields.title}</h3>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="page-view">
+            {/* Single Post View */}
+            <div className="single-post" ref={singlePostRef}>
+              {selectedPrayer && (
                 <div className="post-content">
                   <h1>{selectedPrayer.fields.title}</h1>
                   <div className="content">
                     {renderPrayerContent(selectedPrayer.fields.body)}
                   </div>
                 </div>
-              </div>
-            ) : (
-              /* Homepage View */
-              <div className="homepage">
-                {/* Show all grouped prayers by sections */}
-                {sortedGroupedPrayers.map(([tagName, prayersInGroup]) => (
-                  <div key={tagName} className="prayer-section">
-                    <h2 className="section-title">{tagName}</h2>
-                    <div className="post-list">
-                      {prayersInGroup.map((prayer) => (
-                        <div
-                          key={prayer.sys.id}
-                          className="post-item"
-                          onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
-                        >
-                          <h3>{prayer.fields.title}</h3>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
