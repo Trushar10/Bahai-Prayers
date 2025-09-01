@@ -90,6 +90,37 @@ export default function Home() {
     }
   }, [])
 
+  // Handle browser back/forward navigation for mobile devices
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.showPost === false || !event.state) {
+        // Going back to homepage
+        setShowPost(false)
+        
+        // Clear selected prayer after slide animation completes
+        setTimeout(() => {
+          setSelectedPrayer(null)
+          // Scroll to top of prayer list after transition
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'auto' })
+          })
+        }, 400) // Match CSS transition duration
+      }
+    }
+
+    // Set initial history state for homepage
+    if (!window.history.state) {
+      window.history.replaceState({ showPost: false }, '', window.location.pathname)
+    }
+
+    // Listen for browser back/forward button
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
   // Build tag mapping from prayers data
   const buildTagMapping = useCallback((prayers: Prayer[], tags?: TagEntry[]) => {
     const mapping: { [key: string]: string } = {}
@@ -249,6 +280,13 @@ export default function Home() {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setShowPost(true)
+          
+          // Push new history state to enable back navigation
+          window.history.pushState(
+            { showPost: true, prayerSlug: slug },
+            '',
+            `#${slug}`
+          )
         })
       })
       
@@ -259,16 +297,8 @@ export default function Home() {
 
   // Handle going back to prayer list
   const handleBackClick = useCallback(() => {
-    setShowPost(false)
-    
-    // Clear selected prayer after slide animation completes
-    setTimeout(() => {
-      setSelectedPrayer(null)
-      // Scroll to top of prayer list after transition
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'auto' })
-      })
-    }, 400) // Match CSS transition duration
+    // Use browser history to go back
+    window.history.back()
   }, [])
 
   // Handle PWA installation
