@@ -2,7 +2,6 @@ import Head from 'next/head'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
-import OfflineIndicator from '../components/OfflineIndicator'
 
 // Simplified prayer type
 interface Prayer {
@@ -39,28 +38,11 @@ export default function Home() {
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
-  const [isOnline, setIsOnline] = useState(true)
   const [showPost, setShowPost] = useState(false)
   const singlePostRef = useRef<HTMLDivElement>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   
-  // Online/offline status detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-    
-    setIsOnline(navigator.onLine)
-    
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
   // PWA installation detection
   useEffect(() => {
     // Check if app is already installed
@@ -107,12 +89,6 @@ export default function Home() {
       window.removeEventListener('appinstalled', handleAppInstalled)
     }
   }, [])
-  
-  const syncStatus = {
-    lastSync: new Date(),
-    nextSync: null,
-    failedAttempts: 0
-  }
 
   // Build tag mapping from prayers data
   const buildTagMapping = useCallback((prayers: Prayer[], tags?: TagEntry[]) => {
@@ -165,11 +141,6 @@ export default function Home() {
       try {
         setLoading(true)
         
-        // Check if we're offline first
-        if (!isOnline || !navigator.onLine) {
-          throw new Error('Device is offline')
-        }
-        
         // Try to fetch from API
         const res = await fetch(`/api/prayers?lang=${selectedLang}`)
         
@@ -203,7 +174,7 @@ export default function Home() {
     }
 
     fetchPrayers()
-  }, [selectedLang, buildTagMapping, getCachedPrayers, setCachedPrayers, isOnline])
+  }, [selectedLang, buildTagMapping, getCachedPrayers, setCachedPrayers])
 
   // Get prayer by slug with offline fallback
   const getPrayerBySlug = useCallback(async (slug: string): Promise<Prayer | null> => {
@@ -446,10 +417,6 @@ export default function Home() {
             )}
             <h1 className="title">🙏 Prayer App</h1>
                       <div className="header-controls">
-            <OfflineIndicator 
-              isOnline={isOnline}
-              syncStatus={syncStatus}
-            />
             <LanguageToggle 
               languages={[
                 { code: 'en', name: 'English' },
