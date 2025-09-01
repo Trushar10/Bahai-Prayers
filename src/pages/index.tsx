@@ -118,7 +118,7 @@ export default function Home() {
           localStorage.removeItem(`prayers_${lang}`)
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Silent error - cache read failed
     }
     return null
@@ -130,7 +130,7 @@ export default function Home() {
         data,
         timestamp: Date.now()
       }))
-    } catch (error) {
+    } catch (_error) {
       // Silent error - cache write failed
     }
   }, [])
@@ -157,7 +157,7 @@ export default function Home() {
           // Cache the successful response
           setCachedPrayers(selectedLang, data)
         }
-      } catch (error) {
+      } catch (_error) {
         // Try to use cached data when offline or on error
         const cachedData = getCachedPrayers(selectedLang)
         if (cachedData && cachedData.items) {
@@ -207,7 +207,7 @@ export default function Home() {
       }
       
       return null
-    } catch (error) {
+    } catch (_error) {
       // Fallback to cached data on error
       const cachedData = getCachedPrayers(selectedLang)
       if (cachedData && cachedData.items) {
@@ -359,7 +359,7 @@ export default function Home() {
     if (typeof body === 'string') {
       try {
         body = JSON.parse(body)
-      } catch (parseError) {
+      } catch (_parseError) {
         return <p>Content format is corrupted.</p>
       }
     }
@@ -433,7 +433,7 @@ export default function Home() {
                 <span>Back</span>
               </button>
             )}
-            <h1 className="title">Bahá'í Prayers</h1>
+            <h1 className="title">Bahá&apos;í Prayers</h1>
                       <div className="header-controls">
             <LanguageToggle 
               languages={[

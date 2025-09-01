@@ -13,12 +13,12 @@ const rasa = Rasa({
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     // Global error handler for uncaught exceptions
-    const handleGlobalError = (event: ErrorEvent) => {
+    const handleGlobalError = (_event: ErrorEvent) => {
       // Error logging removed for production
     };
 
     // Global error handler for unhandled promise rejections
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    const handleUnhandledRejection = (_event: PromiseRejectionEvent) => {
       // Error logging removed for production
     };
 
@@ -63,7 +63,7 @@ export default function App({ Component, pageProps }: AppProps) {
           });
         }, 2000);
 
-      }).catch((registrationError) => {
+      }).catch((_registrationError) => {
         // SW registration failed
       });
 
