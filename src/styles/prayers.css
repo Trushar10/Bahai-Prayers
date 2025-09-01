@@ -176,7 +176,6 @@ body {
 .back-btn {
 	background: none;
 	border: none;
-	font-size: 16px;
 	color: var(--link);
 	cursor: pointer;
 	padding: 8px 12px;
@@ -184,12 +183,28 @@ body {
 	left: 20px;
 	top: 50%;
 	transform: translateY(-50%);
-	border-radius: 4px;
-	transition: background-color 0.2s ease;
+	border-radius: 6px;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+	font-weight: 500;
 }
 
 .back-btn:hover {
 	background-color: var(--hover-bg);
+	color: var(--text);
+}
+
+.back-btn svg {
+	width: 16px;
+	height: 16px;
+	stroke-width: 2.5;
+}
+
+.back-btn span {
+	font-family: inherit;
 }
 
 .title {
@@ -506,8 +521,15 @@ body {
 	/* Better mobile touch handling */
 	.back-btn {
 		-webkit-tap-highlight-color: transparent;
-		padding: 12px;
-		font-size: 18px;
+		padding: 10px 14px;
+		left: 12px;
+		font-size: 13px;
+		gap: 4px;
+	}
+
+	.back-btn svg {
+		width: 14px;
+		height: 14px;
 	}
 }
 
