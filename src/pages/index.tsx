@@ -458,6 +458,18 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Feedback Link */}
+        <div className="feedback-container">
+          <a 
+            href="https://forms.gle/sG99p4CB78WPX8y46" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="feedback-link"
+          >
+            📝 Share Your Feedback
+          </a>
+        </div>
+
         <div className={`page-container ${showPost ? 'slide-left' : ''}`}>
           <div className="page-view">
             {/* Homepage View */}

@@ -139,6 +139,38 @@ body {
 	}
 }
 
+/* Feedback Link Styles */
+.feedback-container {
+	text-align: center;
+	padding: 12px 20px 8px 20px;
+	background: var(--bg);
+	border-bottom: 1px solid var(--header-border);
+}
+
+.feedback-link {
+	display: inline-block;
+	color: var(--link);
+	text-decoration: none;
+	font-size: 14px;
+	font-weight: 500;
+	padding: 6px 12px;
+	border-radius: 20px;
+	background: var(--hover-bg);
+	transition: all 0.2s ease;
+	border: 1px solid transparent;
+}
+
+.feedback-link:hover {
+	background: var(--link);
+	color: white;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+[data-theme='dark'] .feedback-link:hover {
+	box-shadow: 0 2px 4px rgba(77, 171, 247, 0.2);
+}
+
 .cache-status {
 	display: flex;
 	align-items: center;
