@@ -90,37 +90,6 @@ export default function Home() {
     }
   }, [])
 
-  // Handle browser back/forward navigation for mobile devices
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state?.showPost === false || !event.state) {
-        // Going back to homepage
-        setShowPost(false)
-        
-        // Clear selected prayer after slide animation completes
-        setTimeout(() => {
-          setSelectedPrayer(null)
-          // Scroll to top of prayer list after transition
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: 0, behavior: 'auto' })
-          })
-        }, 400) // Match CSS transition duration
-      }
-    }
-
-    // Set initial history state for homepage
-    if (!window.history.state) {
-      window.history.replaceState({ showPost: false }, '', window.location.pathname)
-    }
-
-    // Listen for browser back/forward button
-    window.addEventListener('popstate', handlePopState)
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
-
   // Build tag mapping from prayers data
   const buildTagMapping = useCallback((prayers: Prayer[], tags?: TagEntry[]) => {
     const mapping: { [key: string]: string } = {}
@@ -276,17 +245,13 @@ export default function Home() {
         singlePostRef.current.scrollTop = 0
       }
       
+      // Push new history state for the prayer
+      window.history.pushState({ page: 'prayer', slug }, '', `#${slug}`)
+      
       // Start slide animation after content is ready
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setShowPost(true)
-          
-          // Push new history state to enable back navigation
-          window.history.pushState(
-            { showPost: true, prayerSlug: slug },
-            '',
-            `#${slug}`
-          )
         })
       })
       
@@ -297,8 +262,41 @@ export default function Home() {
 
   // Handle going back to prayer list
   const handleBackClick = useCallback(() => {
-    // Use browser history to go back
+    // Update browser history to go back
     window.history.back()
+  }, [])
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      if (showPost) {
+        // If we're currently showing a post, go back to homepage
+        setShowPost(false)
+        
+        // Clear selected prayer after slide animation completes
+        setTimeout(() => {
+          setSelectedPrayer(null)
+          // Scroll to top of prayer list after transition
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, behavior: 'auto' })
+          })
+        }, 400) // Match CSS transition duration
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [showPost])
+
+  // Initialize history state on component mount
+  useEffect(() => {
+    // Set initial history state for homepage
+    if (window.history.state === null) {
+      window.history.replaceState({ page: 'home' }, '', '/')
+    }
   }, [])
 
   // Handle PWA installation
