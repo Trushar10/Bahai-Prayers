@@ -36,6 +36,8 @@ export default function Home() {
   const [isOnline, setIsOnline] = useState(true)
   const [showPost, setShowPost] = useState(false)
   const singlePostRef = useRef<HTMLDivElement>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
   
   // Online/offline status detection
   useEffect(() => {
@@ -50,6 +52,52 @@ export default function Home() {
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // PWA installation detection
+  useEffect(() => {
+    // Check if app is already installed
+    const checkIfInstalled = () => {
+      // Check if running in standalone mode (installed as PWA)
+      if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstalled(true)
+        return
+      }
+      
+      // Check for iOS standalone mode
+      if ((window.navigator as any).standalone === true) {
+        setIsInstalled(true)
+        return
+      }
+      
+      // Check for Android installed app
+      if (document.referrer.startsWith('android-app://')) {
+        setIsInstalled(true)
+        return
+      }
+    }
+
+    checkIfInstalled()
+
+    // Listen for beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setDeferredPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
     }
   }, [])
   
@@ -245,6 +293,26 @@ export default function Home() {
     }, 400) // Match CSS transition duration
   }, [])
 
+  // Handle PWA installation
+  const handleInstallClick = useCallback(async () => {
+    if (!deferredPrompt) return
+
+    // Show the install prompt
+    deferredPrompt.prompt()
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice
+
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt')
+    } else {
+      console.log('User dismissed the install prompt')
+    }
+
+    // Clear the deferredPrompt
+    setDeferredPrompt(null)
+  }, [deferredPrompt])
+
   // Filter prayers by tag (memoized)
   const groupedPrayers: GroupedPrayers = useMemo(() => {
     return prayers.reduce((acc, prayer) => {
@@ -427,6 +495,30 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Add to Home Screen Button */}
+      {!isInstalled && deferredPrompt && (
+        <button 
+          className="install-btn-fixed"
+          onClick={handleInstallClick}
+          title="Add to Home Screen"
+        >
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7,10 12,15 17,10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+      )}
 
       {/* Theme Toggle */}
       <ThemeToggle className="theme-toggle-fixed" />

@@ -410,6 +410,67 @@ body {
 	z-index: 300;
 }
 
+/* Add to Home Screen button */
+.install-btn-fixed {
+	position: fixed !important;
+	bottom: 80px; /* Position above theme toggle */
+	right: 20px;
+	background: var(--container-bg);
+	border: 1px solid var(--header-border);
+	border-radius: 9999px;
+	padding: 12px;
+	width: 48px;
+	height: 48px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	z-index: 300;
+	cursor: pointer;
+	color: var(--link);
+	transition: all 0.2s ease;
+	animation: installPulse 2s infinite;
+}
+
+.install-btn-fixed:hover {
+	background: var(--hover-bg);
+	transform: translateY(-1px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.install-btn-fixed svg {
+	width: 20px;
+	height: 20px;
+}
+
+/* Subtle pulse animation to draw attention */
+@keyframes installPulse {
+	0%,
+	100% {
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	}
+	50% {
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08),
+			0 0 0 4px rgba(0, 123, 255, 0.1);
+	}
+}
+
+/* Dark theme pulse animation */
+[data-theme='dark'] .install-btn-fixed {
+	animation: installPulseDark 2s infinite;
+}
+
+@keyframes installPulseDark {
+	0%,
+	100% {
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+	}
+	50% {
+		box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3),
+			0 0 0 4px rgba(77, 171, 247, 0.15);
+	}
+}
+
 /* ensure language select doesn't overlap on very small screens */
 @media (max-width: 420px) {
 	.language-select {
@@ -530,6 +591,29 @@ body {
 	.back-btn svg {
 		width: 14px;
 		height: 14px;
+	}
+
+	/* Mobile install button styling */
+	.install-btn-fixed {
+		bottom: 75px;
+		right: 16px;
+		width: 44px;
+		height: 44px;
+		padding: 10px;
+	}
+
+	.install-btn-fixed svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	/* Adjust theme toggle for mobile when install button is present */
+	.theme-toggle-fixed {
+		bottom: 16px;
+		right: 16px;
+		width: 44px;
+		height: 44px;
+		padding: 10px;
 	}
 }
 
