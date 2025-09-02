@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
+import { track } from '@vercel/analytics'
 
 // Simplified prayer type
 interface Prayer {
@@ -154,6 +155,12 @@ export default function Home() {
           setPrayers(data.items)
           buildTagMapping(data.items, data.tags)
           
+          // Track home page load with prayers count
+          track('home_page_load', {
+            language: selectedLang,
+            prayers_count: data.items.length
+          });
+          
           // Cache the successful response
           setCachedPrayers(selectedLang, data)
         }
@@ -228,6 +235,13 @@ export default function Home() {
   const handlePrayerClick = useCallback(async (slug: string) => {
     const prayer = await getPrayerBySlug(slug)
     if (prayer) {
+      // Track prayer page view
+      track('prayer_view', {
+        prayer_title: typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Unknown Prayer',
+        prayer_slug: slug,
+        language: selectedLang
+      });
+
       // Set prayer content first
       setSelectedPrayer(prayer)
       
@@ -251,6 +265,15 @@ export default function Home() {
     }
   }, [getPrayerBySlug])
 
+  // Handle language change with tracking
+  const handleLanguageChange = useCallback((newLang: string) => {
+    track('language_change', {
+      from_language: selectedLang,
+      to_language: newLang
+    });
+    setSelectedLang(newLang);
+  }, [selectedLang]);
+
   // Handle going back to prayer list
   const handleBackClick = useCallback(() => {
     // Update browser history to go back
@@ -261,6 +284,12 @@ export default function Home() {
   useEffect(() => {
     const handlePopState = () => {
       if (showPost) {
+        // Track return to home page
+        track('navigation', {
+          action: 'back_to_home',
+          from_page: 'prayer_page'
+        });
+
         // If we're currently showing a post, go back to homepage
         setShowPost(false)
         
@@ -441,7 +470,7 @@ export default function Home() {
                 { code: 'gu', name: 'ગુજરાતી' }
               ]}
               currentLang={selectedLang}
-              onChange={setSelectedLang}
+              onChange={handleLanguageChange}
             />
           </div>
           </div>

@@ -6,6 +6,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { Document } from '@contentful/rich-text-types';
 import ThemeToggle from '../components/ThemeToggle';
+import { useEffect } from 'react';
+import { track } from '@vercel/analytics';
 
 // Helper function to clean URL slugs (replace spaces with hyphens)
 const cleanUrlSlug = (text: string): string => {
@@ -93,6 +95,16 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
 
 export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 	const router = useRouter();
+
+	// Track page views for individual prayer pages
+	useEffect(() => {
+		if (prayer && prayer.fields.title) {
+			track('prayer_page_view', {
+				prayer_title: typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Unknown Prayer',
+				prayer_slug: router.asPath,
+			});
+		}
+	}, [prayer, router.asPath]);
 
 	if (!prayer) {
 		return (
