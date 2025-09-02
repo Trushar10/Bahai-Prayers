@@ -9,7 +9,10 @@ export default function Document() {
         <meta name="theme-color" content="#007bff" />
         
         {/* Icons */}
-        <link rel="icon" href="/Bahai-Logo.png" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
         <link rel="apple-touch-icon" href="/Bahai-Logo.png" />
         
         {/* iOS specific PWA meta tags */}

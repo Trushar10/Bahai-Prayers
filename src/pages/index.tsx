@@ -405,7 +405,6 @@ export default function Home() {
         <title>Prayer App</title>
         <meta name="description" content="A simple prayer app with content from multiple languages" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       {/* Main Container */}
