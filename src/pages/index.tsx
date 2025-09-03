@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import ThemeToggle from '../components/ThemeToggle'
 import LanguageToggle from '../components/LanguageToggle'
 import { track } from '@vercel/analytics'
+import { pageview } from '@vercel/analytics'
 
 // Simplified prayer type
 interface Prayer {
@@ -235,7 +236,10 @@ export default function Home() {
   const handlePrayerClick = useCallback(async (slug: string) => {
     const prayer = await getPrayerBySlug(slug)
     if (prayer) {
-      // Track prayer page view
+      // Track prayer page view as a proper page view
+      pageview({ path: `/${slug}` });
+      
+      // Also track as custom event with metadata
       track('prayer_view', {
         prayer_title: typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Unknown Prayer',
         prayer_slug: slug,
@@ -284,6 +288,9 @@ export default function Home() {
   useEffect(() => {
     const handlePopState = () => {
       if (showPost) {
+        // Track return to home page as a page view
+        pageview({ path: '/' });
+        
         // Track return to home page
         track('navigation', {
           action: 'back_to_home',
@@ -310,6 +317,35 @@ export default function Home() {
       window.removeEventListener('popstate', handlePopState)
     }
   }, [showPost])
+
+  // Handle direct visits to prayer URLs (when someone visits a link with hash)
+  useEffect(() => {
+    const handleInitialHash = async () => {
+      if (prayers.length > 0 && typeof window !== 'undefined') {
+        const hash = window.location.hash.slice(1); // Remove the # symbol
+        if (hash && hash !== '') {
+          // Track the direct visit to prayer page
+          pageview({ path: `/${hash}` });
+          
+          // Load and show the prayer
+          const prayer = await getPrayerBySlug(hash);
+          if (prayer) {
+            setSelectedPrayer(prayer);
+            setShowPost(true);
+            
+            track('prayer_view', {
+              prayer_title: typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Unknown Prayer',
+              prayer_slug: hash,
+              language: selectedLang,
+              visit_type: 'direct_link'
+            });
+          }
+        }
+      }
+    };
+
+    handleInitialHash();
+  }, [prayers, selectedLang, getPrayerBySlug]);
 
   // Initialize history state on component mount
   useEffect(() => {
