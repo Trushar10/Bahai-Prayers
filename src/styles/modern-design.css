@@ -1,8 +1,8 @@
 /* CSS Custom Properties for Theme System */
 :root {
 	/* Light Theme */
-	--bg-primary: #ffffff;
-	--bg-secondary: #f8fafc;
+	--bg-primary: #ffd40029;
+	--bg-secondary: #ffd40000;
 	--bg-tertiary: #f1f5f9;
 	--text-primary: #0f172a;
 	--text-secondary: #475569;
