@@ -18,7 +18,7 @@ export default function Document() {
         {/* iOS specific PWA meta tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Prayer App" />
+        <meta name="apple-mobile-web-app-title" content="Bahá'í Prayers" />
         
         {/* Android specific */}
         <meta name="mobile-web-app-capable" content="yes" />

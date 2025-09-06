@@ -1,7 +1,7 @@
 {
-  "name": "Prayer App",
+  "name": "Bahá'í Prayers",
   "short_name": "Prayers",
-  "description": "A multilingual prayer app with offline support",
+  "description": "A multilingual Bahá'í Prayers app with offline support",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafe",

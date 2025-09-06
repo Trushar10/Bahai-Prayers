@@ -1,3 +1,5 @@
+// PWA configuration - now working after folder rename
+// Folder renamed from "Bahá'í Prayers" to "Bahai-Prayers" to fix workbox issues
 const withPWA = require('next-pwa')({
   dest: 'public',
   disable: process.env.NODE_ENV === 'development',

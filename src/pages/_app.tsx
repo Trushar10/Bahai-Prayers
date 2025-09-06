@@ -1,4 +1,4 @@
-import '../styles/prayers.css'
+import '../styles/modern-design.css'
 import type { AppProps } from 'next/app'
 import { Rasa } from 'next/font/google'
 import { useEffect } from 'react'

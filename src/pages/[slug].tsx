@@ -111,25 +111,58 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 			<>
 				<Head>
 					<title>Prayer Not Found</title>
+					<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+					<meta name="theme-color" content="#667eea" />
 				</Head>
-				<div className="container">
-					<header className="header">
-						<div className="header-content">
-							<button
-								className="back-btn"
-								onClick={() => router.back()}
-							>
-								← Back
-							</button>
-							<div className="title">Prayer Not Found</div>
+				<div className="app">
+					<div className="nav-header">
+						<div className="nav-content">
+							<div className="nav-left">
+								<button className="nav-btn back-btn" onClick={() => router.back()}>
+									<svg
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="15,18 9,12 15,6"></polyline>
+									</svg>
+								</button>
+								<div className="logo">
+									<svg
+										width="28"
+										height="28"
+										viewBox="0 0 24 24"
+										fill="none"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<path
+											d="M12 2L3 9h3v9h12v-9h3L12 2zm0 3.5L16.5 9H15v7H9V9H7.5L12 5.5z"
+											fill="currentColor"
+										/>
+									</svg>
+									<h1 className="app-title">Prayer Not Found</h1>
+								</div>
+							</div>
 						</div>
-					</header>
-					<main className="single-post">
-						<div className="post-content">
-							<h1>Prayer Not Available</h1>
-							<p>The requested prayer could not be found.</p>
+					</div>
+					<div className="page-content">
+						<div className="prayer-detail">
+							<div className="prayer-header">
+								<h1 className="prayer-detail-title">Prayer Not Available</h1>
+								<div className="prayer-detail-meta">Error</div>
+							</div>
+							<div className="prayer-content">
+								<div className="prayer-text">
+									<p>The requested prayer could not be found.</p>
+								</div>
+							</div>
 						</div>
-					</main>
+					</div>
 				</div>
 			</>
 		);
@@ -143,53 +176,114 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 						? prayer.fields.title
 						: 'Prayer'}
 				</title>
-				<meta
-					name="viewport"
-					content="width=device-width, initial-scale=1"
+				<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+				<meta name="theme-color" content="#667eea" />
+				<meta name="apple-mobile-web-app-capable" content="yes" />
+				<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+				<meta name="apple-mobile-web-app-title" content="Prayers" />
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+				<link
+					href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+					rel="stylesheet"
 				/>
-				<meta name="theme-color" content="#317EFB" />
 				<link rel="manifest" href="/manifest.json" />
 				<link rel="icon" href="/favicon.webp" />
 			</Head>
 
-			<div className="container show-single-post">
-				<header className="header">
-					<div className="header-content">
-						<button
-							className="back-btn"
-							onClick={() => router.back()}
-						>
-							← Back
-						</button>
-						<div className="title">
-							{typeof prayer.fields.title === 'string'
-								? prayer.fields.title
-								: 'Prayer'}
+			<div className="app">
+				<div className="nav-header">
+					<div className="nav-content">
+						<div className="nav-left">
+							<button className="nav-btn back-btn" onClick={() => router.back()}>
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								>
+									<polyline points="15,18 9,12 15,6"></polyline>
+								</svg>
+							</button>
+							<div className="logo">
+								<svg
+									width="28"
+									height="28"
+									viewBox="0 0 24 24"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<path
+										d="M12 2L3 9h3v9h12v-9h3L12 2zm0 3.5L16.5 9H15v7H9V9H7.5L12 5.5z"
+										fill="currentColor"
+									/>
+								</svg>
+								<h1 className="app-title">Prayers</h1>
+							</div>
+						</div>
+						<div className="nav-right">
+							<ThemeToggle />
 						</div>
 					</div>
-				</header>
+				</div>
 
-				<main className="single-post">
-					<article className="post-content">
-						<h1>
-							{typeof prayer.fields.title === 'string'
-								? prayer.fields.title
-								: 'Prayer'}
-						</h1>
-						<div className="content">
-							{documentToReactComponents(
-								prayer.fields.body as Document
-							)}
+				<div className="page-content">
+					<div className="prayer-detail">
+						<div className="prayer-header">
+							<h1 className="prayer-detail-title">
+								{typeof prayer.fields.title === 'string'
+									? prayer.fields.title
+									: 'Prayer'}
+							</h1>
 						</div>
-					</article>
-				</main>
-				<footer className="footer">
-					<p>
-						&copy; {new Date().getFullYear()} Prayer App. All rights
-						reserved.
-					</p>
-				</footer>
-				<ThemeToggle className="theme-toggle-fixed" />
+						<div className="prayer-content">
+							<div className="prayer-text">
+								{documentToReactComponents(
+									prayer.fields.body as Document
+								)}
+							</div>
+						</div>
+						<div className="action-buttons">
+							<button 
+								className="action-btn" 
+								onClick={() => {
+									if (navigator.share) {
+										navigator.share({
+											title: typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer',
+											text: prayer.fields.body?.toString() || '',
+											url: window.location.href,
+										}).catch(console.error);
+									}
+								}}
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+									<path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+								</svg>
+								Share
+							</button>
+							<button 
+								className="action-btn primary" 
+								onClick={() => {
+									const text = `${typeof prayer.fields.title === 'string' ? prayer.fields.title : 'Prayer'}\n\n${prayer.fields.body?.toString() || ''}`;
+									navigator.clipboard.writeText(text).then(() => {
+										console.log('Prayer copied to clipboard');
+									}).catch(console.error);
+								}}
+							>
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+									<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+								</svg>
+								Copy
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div className="bottom-safe-area"></div>
 			</div>
 		</>
 	);

@@ -375,6 +375,82 @@ export default function Home() {
     setDeferredPrompt(null)
   }, [deferredPrompt])
 
+  // Handle sharing prayer
+  const handleShare = useCallback(async (prayer: Prayer) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: prayer.fields.title,
+          text: renderPrayerContentAsText(prayer.fields.body),
+          url: window.location.href,
+        })
+      } catch (error) {
+        // User cancelled sharing or error occurred
+        console.log('Sharing cancelled or failed:', error)
+      }
+    } else {
+      // Fallback to copy
+      handleCopy(prayer)
+    }
+  }, [])
+
+  // Handle copying prayer
+  const handleCopy = useCallback(async (prayer: Prayer) => {
+    try {
+      const text = `${prayer.fields.title}\n\n${renderPrayerContentAsText(prayer.fields.body)}`
+      await navigator.clipboard.writeText(text)
+      // Show success feedback - you could add a toast notification here
+      console.log('Prayer copied to clipboard')
+    } catch (error) {
+      console.error('Failed to copy prayer:', error)
+    }
+  }, [])
+
+  // Helper function to render prayer content as plain text
+  const renderPrayerContentAsText = useCallback((body: unknown): string => {
+    if (!body) return 'No content available for this prayer.'
+
+    // Handle both string and object formats
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body)
+      } catch (_parseError) {
+        return 'Content format is corrupted.'
+      }
+    }
+
+    // Simple content rendering - extract text for sharing/copying
+    if (body && typeof body === 'object' && body !== null && 'content' in body) {
+      const bodyObj = body as { content: Array<{ nodeType: string; content?: Array<{ value?: string }> }> }
+      return bodyObj.content.map((node) => {
+        if (node.nodeType === 'paragraph' && node.content) {
+          return node.content.map((textNode) => textNode.value || '').join('')
+        }
+        return ''
+      }).join('\n\n')
+    }
+
+    return 'Unable to extract prayer content.'
+  }, [])
+
+  // Check if prayer is available offline
+  const isPrayerAvailableOffline = useCallback((prayer: Prayer): boolean => {
+    try {
+      const cached = localStorage.getItem(`prayers_${selectedLang}`)
+      if (cached) {
+        const parsedData = JSON.parse(cached)
+        if (parsedData.data && parsedData.data.items) {
+          return parsedData.data.items.some((cachedPrayer: Prayer) => 
+            cachedPrayer.sys.id === prayer.sys.id
+          )
+        }
+      }
+    } catch (_error) {
+      // Silent error - cache read failed
+    }
+    return false
+  }, [selectedLang])
+
   // Filter prayers by tag (memoized)
   const groupedPrayers: GroupedPrayers = useMemo(() => {
     return prayers.reduce((acc, prayer) => {
@@ -459,7 +535,10 @@ export default function Home() {
         minHeight: '100vh',
         gap: '1rem'
       }}>
-        <div>Loading prayers...</div>
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <div>Loading prayers...</div>
+        </div>
       </div>
     )
   }
@@ -467,125 +546,191 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Prayer App</title>
-        <meta name="description" content="A simple prayer app with content from multiple languages" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Bahá&apos;í Prayers</title>
+        <meta name="description" content="Modern Bahá'í Prayers app with elegant design and native app experience" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <meta name="theme-color" content="#667eea" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Prayers" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
       </Head>
 
-      {/* Main Container */}
-      <div className="container">
-        {/* Header */}
-        <div className="header">
-          <div className="header-content">
-            {selectedPrayer && (
-              <button 
-                className="back-btn"
-                onClick={handleBackClick}
-              >
-                <svg 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <polyline points="15,18 9,12 15,6"></polyline>
-                </svg>
-                <span>Back</span>
-              </button>
+      {/* App Container */}
+      <div className="app">
+        {/* Navigation Header */}
+        <div className="nav-header">
+          <div className="nav-content">
+            <div className="nav-left">
+              {selectedPrayer && (
+                <button className="nav-btn back-btn" onClick={handleBackClick}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                  </svg>
+                  Back
+                </button>
+              )}
+            </div>
+            {!selectedPrayer && (
+              <div className="nav-right">
+                {!isInstalled && deferredPrompt && (
+                  <button 
+                    className="nav-install-btn" 
+                    onClick={handleInstallClick}
+                    title="Install App"
+                  >
+                    <svg 
+                      width="20" 
+                      height="20" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect x="7" y="3" width="10" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <path d="M12 9V15M12 15L10 13M12 15L14 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )}
+                <LanguageToggle 
+                  languages={[
+                    { code: 'en', name: 'English' },
+                    { code: 'hi', name: 'हिन्दी' },
+                    { code: 'gu', name: 'ગુજરાતી' }
+                  ]}
+                  currentLang={selectedLang}
+                  onChange={handleLanguageChange}
+                />
+                <ThemeToggle />
+              </div>
             )}
-            <h1 className="title">Bahá&apos;í Prayers</h1>
-                      <div className="header-controls">
-            <LanguageToggle 
-              languages={[
-                { code: 'en', name: 'English' },
-                { code: 'hi', name: 'हिन्दी' },
-                { code: 'gu', name: 'ગુજરાતી' }
-              ]}
-              currentLang={selectedLang}
-              onChange={handleLanguageChange}
-            />
-          </div>
           </div>
         </div>
 
         {/* Feedback Link */}
-        <div className="feedback-container">
-          <a 
-            href="https://forms.gle/sG99p4CB78WPX8y46" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="feedback-link"
-          >
-            📝 Share Your Feedback
-          </a>
+        <div className="feedback-banner">
+          <div className="feedback-content">
+            <a
+              href="https://forms.gle/sG99p4CB78WPX8y46"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="feedback-link"
+            >
+              <span>📝</span>
+              Share Your Feedback
+            </a>
+          </div>
         </div>
 
-        <div className={`page-container ${showPost ? 'slide-left' : ''}`}>
-          <div className="page-view">
-            {/* Homepage View */}
-            <div className="homepage">
-              {/* Show all grouped prayers by sections */}
-              {sortedGroupedPrayers.map(([tagName, prayersInGroup]) => (
-                <div key={tagName} className="prayer-section">
-                  <h2 className="section-title">{tagName}</h2>
-                  <div className="post-list">
-                    {prayersInGroup.map((prayer) => (
-                      <div
-                        key={prayer.sys.id}
-                        className="post-item"
-                        onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
-                      >
-                        <h3>{prayer.fields.title}</h3>
-                      </div>
-                    ))}
-                  </div>
+        {/* Page Container */}
+        <div className={`page-container ${showPost ? 'push-right' : ''}`}>
+          {/* Home Page */}
+          <div className="page home-page">
+            <div className="page-content" id="homePage">
+              {loading ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <div>Loading prayers...</div>
                 </div>
-              ))}
+              ) : (
+                <>
+                  <div className="welcome-section">
+                    <h1 className="welcome-title">
+                      Bahá&apos;í Prayers
+                    </h1>
+                    <p className="welcome-subtitle">
+                      Find peace and guidance through prayer
+                    </p>
+                  </div>
+                  <div className="prayer-sections">
+                    {sortedGroupedPrayers.map(([tagName, prayersInGroup]) => (
+                    <div key={tagName} className="prayer-section fade-in-up">
+                      <div className="section-header">
+                        <h2 className="section-title">{tagName}</h2>
+                        <span className="section-count">{prayersInGroup.length}</span>
+                      </div>
+                      <div className="prayer-grid">
+                        {prayersInGroup.map((prayer) => (
+                          <div
+                            key={prayer.sys.id}
+                            className="prayer-card"
+                            onClick={() => handlePrayerClick(cleanUrlSlug(prayer.fields.slug))}
+                          >
+                            <h3 className="prayer-title">{prayer.fields.title}</h3>
+                            <div className={`prayer-meta ${isPrayerAvailableOffline(prayer) ? 'offline-available' : 'online-only'}`}>
+                              <svg
+                                className="prayer-icon"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                {isPrayerAvailableOffline(prayer) ? (
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                ) : (
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3.5 6L12 10.5 8.5 8 12 5.5 15.5 8zM8 12l4 4 4-4-4-4-4 4z" />
+                                )}
+                              </svg>
+                              <span>{isPrayerAvailableOffline(prayer) ? 'Available Offline' : 'Online Only'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="page-view">
-            {/* Single Post View */}
-            <div className="single-post" ref={singlePostRef}>
+          {/* Detail Page */}
+          <div className="page prayer-view-page">
+            <div className="detail-page" ref={singlePostRef}>
               {selectedPrayer && (
-                <div className="post-content">
-                  <h1>{selectedPrayer.fields.title}</h1>
-                  <div className="content">
-                    {renderPrayerContent(selectedPrayer.fields.body)}
+                <div className="prayer-detail">
+                  <div className="prayer-header">
+                    <h1 className="prayer-detail-title">{selectedPrayer.fields.title}</h1>                    
+                  </div>
+                  <div className="prayer-content">
+                    <div className="prayer-text">
+                      {renderPrayerContent(selectedPrayer.fields.body)}
+                    </div>
+                  </div>
+                  <div className="action-buttons">
+                    <button className="action-btn" onClick={() => handleShare(selectedPrayer)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+                      </svg>
+                      Share
+                    </button>
+                    <button className="action-btn primary" onClick={() => handleCopy(selectedPrayer)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                      </svg>
+                      Copy
+                    </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
         </div>
+      
+        {/* Bottom Safe Area */}
+        <div className="bottom-safe-area"></div>
       </div>
-
-      {/* Add to Home Screen Button */}
-      {!isInstalled && deferredPrompt && (
-        <button 
-          className="install-btn-fixed"
-          onClick={handleInstallClick}
-          title="Add to Home Screen"
-        >
-          <svg 
-            width="32" 
-            height="32" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect x="7" y="3" width="10" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-            <path d="M12 9V15M12 15L10 13M12 15L14 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      )}
-
-      {/* Theme Toggle */}
-      <ThemeToggle className="theme-toggle-fixed" />
     </>
   )
 }
