@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "generate-icons": "node scripts/generate-pwa-icons.js",
+    "generate-favicon": "node scripts/generate-favicon.js",
     "clean:cache": "rm -rf .next/cache && rm -rf public/sw.js* && rm -rf public/workbox-*"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
+    "to-ico": "^1.1.5",
     "typescript": "^5"
   }
 }
