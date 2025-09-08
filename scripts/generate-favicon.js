@@ -44,15 +44,15 @@ async function generateFavicon() {
 		for (const size of sizes) {
 			// Create circular mask for regular favicons (no padding)
 			const maskBuffer = await createCircularMaskForFavicon(size);
-			
+
 			// Process the logo with circular mask
 			const pngBuffer = await sharp(svgBuffer)
 				.resize(size, size)
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in'
-					}
+						blend: 'dest-in',
+					},
 				])
 				.png()
 				.toBuffer();
@@ -64,8 +64,8 @@ async function generateFavicon() {
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in'
-					}
+						blend: 'dest-in',
+					},
 				])
 				.png()
 				.toFile(
@@ -84,22 +84,17 @@ async function generateFavicon() {
 		const additionalSizes = [192, 512];
 		for (const size of additionalSizes) {
 			const maskBuffer = await createCircularMask(size);
-			
+
 			await sharp(svgBuffer)
 				.resize(size, size)
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in'
-					}
+						blend: 'dest-in',
+					},
 				])
 				.png()
-				.toFile(
-					path.join(
-						__dirname,
-						`../public/favicon-${size}.png`
-					)
-				);
+				.toFile(path.join(__dirname, `../public/favicon-${size}.png`));
 		}
 
 		// Generate a general favicon.png (32x32) - no padding for regular favicon
@@ -109,8 +104,8 @@ async function generateFavicon() {
 			.composite([
 				{
 					input: generalMaskBuffer,
-					blend: 'dest-in'
-				}
+					blend: 'dest-in',
+				},
 			])
 			.png()
 			.toFile(path.join(__dirname, '../public/favicon.png'));
