@@ -188,7 +188,7 @@ export default function PrayerPage({ prayer }: { prayer: PrayerEntry }) {
 					rel="stylesheet"
 				/>
 				<link rel="manifest" href="/manifest.json" />
-				<link rel="icon" href="/favicon.webp" />
+				<link rel="icon" href="/favicon.ico?v=2" />
 			</Head>
 
 			<div className="app">

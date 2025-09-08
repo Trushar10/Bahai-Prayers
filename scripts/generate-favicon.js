@@ -4,7 +4,20 @@ const fs = require('fs');
 const path = require('path');
 
 async function createCircularMask(size) {
-	// Create a circular mask
+	// Create a circular mask with padding for PWA icons
+	const padding = Math.floor(size * 0.1); // 10% padding
+	const radius = Math.floor((size - padding * 2) / 2);
+	const center = Math.floor(size / 2);
+	const svg = `
+		<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+			<circle cx="${center}" cy="${center}" r="${radius}" fill="white"/>
+		</svg>
+	`;
+	return Buffer.from(svg);
+}
+
+async function createCircularMaskForFavicon(size) {
+	// Create a circular mask without padding for regular favicons
 	const radius = Math.floor(size / 2);
 	const svg = `
 		<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
@@ -29,17 +42,17 @@ async function generateFavicon() {
 		const pngBuffers = [];
 
 		for (const size of sizes) {
-			// Create circular mask
-			const maskBuffer = await createCircularMask(size);
-
+			// Create circular mask for regular favicons (no padding)
+			const maskBuffer = await createCircularMaskForFavicon(size);
+			
 			// Process the logo with circular mask
 			const pngBuffer = await sharp(svgBuffer)
 				.resize(size, size)
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in',
-					},
+						blend: 'dest-in'
+					}
 				])
 				.png()
 				.toBuffer();
@@ -51,8 +64,8 @@ async function generateFavicon() {
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in',
-					},
+						blend: 'dest-in'
+					}
 				])
 				.png()
 				.toFile(
@@ -67,32 +80,37 @@ async function generateFavicon() {
 		const icoBuffer = await toIco(pngBuffers);
 		fs.writeFileSync(outputPath, icoBuffer);
 
-		// Generate additional sizes for PWA and modern browsers
+		// Generate additional sizes for PWA and modern browsers (with padding)
 		const additionalSizes = [192, 512];
 		for (const size of additionalSizes) {
 			const maskBuffer = await createCircularMask(size);
-
+			
 			await sharp(svgBuffer)
 				.resize(size, size)
 				.composite([
 					{
 						input: maskBuffer,
-						blend: 'dest-in',
-					},
+						blend: 'dest-in'
+					}
 				])
 				.png()
-				.toFile(path.join(__dirname, `../public/favicon-${size}.png`));
+				.toFile(
+					path.join(
+						__dirname,
+						`../public/favicon-${size}.png`
+					)
+				);
 		}
 
-		// Generate a general favicon.png (32x32)
-		const generalMaskBuffer = await createCircularMask(32);
+		// Generate a general favicon.png (32x32) - no padding for regular favicon
+		const generalMaskBuffer = await createCircularMaskForFavicon(32);
 		await sharp(svgBuffer)
 			.resize(32, 32)
 			.composite([
 				{
 					input: generalMaskBuffer,
-					blend: 'dest-in',
-				},
+					blend: 'dest-in'
+				}
 			])
 			.png()
 			.toFile(path.join(__dirname, '../public/favicon.png'));
@@ -100,12 +118,12 @@ async function generateFavicon() {
 		console.log('✅ Round favicon generated successfully!');
 		console.log('📁 Files created:');
 		console.log('   - favicon.ico (with 16x16, 32x32, 48x48 sizes)');
-		console.log('   - favicon-16x16.png');
-		console.log('   - favicon-32x32.png');
-		console.log('   - favicon-48x48.png');
-		console.log('   - favicon-192.png');
-		console.log('   - favicon-512.png');
-		console.log('   - favicon.png');
+		console.log('   - favicon-16x16.png (no padding)');
+		console.log('   - favicon-32x32.png (no padding)');
+		console.log('   - favicon-48x48.png (no padding)');
+		console.log('   - favicon-192.png (with 10% padding for PWA)');
+		console.log('   - favicon-512.png (with 10% padding for PWA)');
+		console.log('   - favicon.png (no padding)');
 	} catch (error) {
 		console.error('❌ Error generating favicon:', error);
 	}
