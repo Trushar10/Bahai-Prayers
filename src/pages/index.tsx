@@ -36,7 +36,17 @@ interface GroupedPrayers {
 
 export default function Home() {
   const [prayers, setPrayers] = useState<Prayer[]>([])
-  const [selectedLang, setSelectedLang] = useState('en')
+  const [selectedLang, setSelectedLang] = useState(() => {
+    // Load saved language preference on initialization
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('preferred_language') || 'en'
+      } catch {
+        return 'en'
+      }
+    }
+    return 'en'
+  })
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null)
   const [tagMapping, setTagMapping] = useState<{ [key: string]: string }>({})
   const [loading, setLoading] = useState(true)
@@ -275,6 +285,14 @@ export default function Home() {
       from_language: selectedLang,
       to_language: newLang
     });
+    
+    // Save language preference to localStorage
+    try {
+      localStorage.setItem('preferred_language', newLang);
+    } catch (error) {
+      console.warn('Failed to save language preference:', error);
+    }
+    
     setSelectedLang(newLang);
   }, [selectedLang]);
 
