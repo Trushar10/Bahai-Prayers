@@ -23,6 +23,22 @@ export default function Document() {
         {/* Android specific */}
         <meta name="mobile-web-app-capable" content="yes" />
         
+        {/* Google Analytics */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-Y1J3V8YLEC"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-Y1J3V8YLEC');
+            `,
+          }}
+        />
+        
         {/* Preload theme before React hydration */}
         <script
           dangerouslySetInnerHTML={{
