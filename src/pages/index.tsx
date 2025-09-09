@@ -500,21 +500,36 @@ export default function Home() {
       const getOrderIndex = (tagName: string): number => {
         const lowerTagName = tagName.toLowerCase();
         
-        // Check for obligatory prayers (should be first)
-        if (lowerTagName.includes('obligatory')) return 0;
+        // Debug logging (remove in production)
+        console.log('Checking tag:', tagName, 'lowercase:', lowerTagName);
         
-        // Check for general prayers (should be second)
-        if (lowerTagName.includes('general')) return 1;
+        // Check for obligatory prayers (should be first) - more specific patterns
+        if (lowerTagName.includes('obligatory') || lowerTagName.includes('અનિવાર્ય') || lowerTagName.includes('अनिवार्य')) {
+          console.log('Found obligatory tag:', tagName, 'index: 0');
+          return 0;
+        }
         
-        // Check for tablet/પાતી (should be third)
-        if (lowerTagName.includes('tablet') || lowerTagName.includes('પાતી')) return 2;
+        // Check for general prayers (should be second) - more specific patterns  
+        if (lowerTagName.includes('general') || lowerTagName.includes('સામાન્ય') || lowerTagName.includes('सामान्य')) {
+          console.log('Found general tag:', tagName, 'index: 1');
+          return 1;
+        }
+        
+        // Check for tablet/પાતી (should be third) - more specific patterns
+        if (lowerTagName.includes('tablet') || lowerTagName.includes('પાતી') || lowerTagName.includes('तख्ती')) {
+          console.log('Found tablet tag:', tagName, 'index: 2');
+          return 2;
+        }
         
         // Put unrecognized tags at the end
+        console.log('Unrecognized tag:', tagName, 'index: 999');
         return 999;
       };
       
       const indexA = getOrderIndex(tagNameA);
       const indexB = getOrderIndex(tagNameB);
+      
+      console.log('Comparing:', tagNameA, '(index:', indexA, ') vs', tagNameB, '(index:', indexB, ')');
       
       // If both tags have the same order index, sort alphabetically
       if (indexA === indexB) {
