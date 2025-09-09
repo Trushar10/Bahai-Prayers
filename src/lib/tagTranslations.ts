@@ -55,6 +55,26 @@ export const tagTranslations: TagTranslations = {
     'en': 'The Obligatory Prayers',
     'hi': 'अनिवार्य प्रार्थनाएँ',
     'gu': 'અનિવાર્ય પ્રાર્થના'
+  },
+  'tablet': {
+    'en': 'Tablet',
+    'hi': 'तख्ती',
+    'gu': 'પાતી'
+  },
+  'tablet-gu': {
+    'en': 'Tablet',
+    'hi': 'तख्ती',
+    'gu': 'પાતી'
+  },
+  'tablet-hi': {
+    'en': 'Tablet',
+    'hi': 'तख्ती',
+    'gu': 'પાતી'
+  },
+  'tablet-en': {
+    'en': 'Tablet',
+    'hi': 'तख्ती',
+    'gu': 'પાતી'
   }
 };
 

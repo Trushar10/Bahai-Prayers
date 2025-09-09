@@ -199,11 +199,7 @@ body {
 
 /* Feedback Banner */
 .feedback-banner {
-	background: linear-gradient(
-		135deg,
-		var(--accent-primary),
-		var(--accent-secondary)
-	);
+	background: linear-gradient(135deg, #6170ff, #7647ff);
 	padding: 12px 20px;
 }
 
