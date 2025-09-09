@@ -478,12 +478,27 @@ export default function Home() {
   // Sort grouped prayers to put "Obligatory" first (memoized)
   const sortedGroupedPrayers = useMemo(() => {
     return Object.entries(groupedPrayers).sort(([tagNameA], [tagNameB]) => {
-      // "Obligatory" should come first
-      if (tagNameA.toLowerCase().includes('obligatory')) return -1
-      if (tagNameB.toLowerCase().includes('obligatory')) return 1
+      // Define the desired order
+      const tagOrder = ['obligatory', 'general', 'tablet'];
       
-      // Then sort alphabetically for other categories
-      return tagNameA.localeCompare(tagNameB)
+      // Get the order index for each tag
+      const getOrderIndex = (tagName: string): number => {
+        const lowerTagName = tagName.toLowerCase();
+        if (lowerTagName.includes('obligatory')) return 0;
+        if (lowerTagName.includes('general')) return 1;
+        if (lowerTagName.includes('tablet')) return 2;
+        return 999; // Put unrecognized tags at the end
+      };
+      
+      const indexA = getOrderIndex(tagNameA);
+      const indexB = getOrderIndex(tagNameB);
+      
+      // If both tags have the same order index, sort alphabetically
+      if (indexA === indexB) {
+        return tagNameA.localeCompare(tagNameB);
+      }
+      
+      return indexA - indexB;
     })
   }, [groupedPrayers])
 
