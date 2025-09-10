@@ -51,6 +51,30 @@ async function generateFavicon() {
 	const inputPath = path.join(__dirname, '../public/bahai-logo.svg');
 	const outputPath = path.join(__dirname, '../public/favicon.ico');
 
+	// Check if all required files already exist
+	const requiredFiles = [
+		'favicon.ico',
+		'favicon-16x16.png',
+		'favicon-32x32.png', 
+		'favicon-48x48.png',
+		'favicon-192.png',
+		'favicon-512.png',
+		'favicon-192-maskable.png',
+		'favicon-512-maskable.png',
+		'favicon.png'
+	];
+
+	const publicDir = path.join(__dirname, '../public');
+	const allExist = requiredFiles.every(file => {
+		const filePath = path.join(publicDir, file);
+		return fs.existsSync(filePath) && fs.statSync(filePath).size > 0;
+	});
+
+	if (allExist) {
+		console.log('✅ All favicon files already exist, skipping generation');
+		return;
+	}
+
 	try {
 		console.log('Converting SVG to round ICO...');
 
