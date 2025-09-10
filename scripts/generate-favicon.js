@@ -16,6 +16,26 @@ async function createCircularMask(size) {
 	return Buffer.from(svg);
 }
 
+async function createMaskableIcon(size) {
+	// Create a maskable icon with proper safe zone (20% padding on each side)
+	// This ensures the logo stays within the safe zone when masked
+	const padding = Math.floor(size * 0.2); // 20% padding for safe zone
+	const logoSize = size - padding * 2;
+	const center = Math.floor(size / 2);
+
+	// Create a white background square for maskable icons
+	const svg = `
+		<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+			<rect width="${size}" height="${size}" fill="white"/>
+		</svg>
+	`;
+	return {
+		background: Buffer.from(svg),
+		logoSize: logoSize,
+		offset: padding,
+	};
+}
+
 async function createCircularMaskForFavicon(size) {
 	// Create a circular mask without padding for regular favicons
 	const radius = Math.floor(size / 2);
@@ -97,6 +117,37 @@ async function generateFavicon() {
 				.toFile(path.join(__dirname, `../public/favicon-${size}.png`));
 		}
 
+		// Generate maskable icons with proper safe zone
+		const maskableSizes = [192, 512];
+		for (const size of maskableSizes) {
+			const { background, logoSize, offset } = await createMaskableIcon(
+				size
+			);
+
+			// Create logo with proper size for safe zone
+			const resizedLogo = await sharp(svgBuffer)
+				.resize(logoSize, logoSize)
+				.png()
+				.toBuffer();
+
+			// Composite logo onto white background with proper offset
+			await sharp(background)
+				.composite([
+					{
+						input: resizedLogo,
+						top: offset,
+						left: offset,
+					},
+				])
+				.png()
+				.toFile(
+					path.join(
+						__dirname,
+						`../public/favicon-${size}-maskable.png`
+					)
+				);
+		}
+
 		// Generate a general favicon.png (32x32) - no padding for regular favicon
 		const generalMaskBuffer = await createCircularMaskForFavicon(32);
 		await sharp(svgBuffer)
@@ -118,6 +169,8 @@ async function generateFavicon() {
 		console.log('   - favicon-48x48.png (no padding)');
 		console.log('   - favicon-192.png (with 10% padding for PWA)');
 		console.log('   - favicon-512.png (with 10% padding for PWA)');
+		console.log('   - favicon-192-maskable.png (with 20% safe zone)');
+		console.log('   - favicon-512-maskable.png (with 20% safe zone)');
 		console.log('   - favicon.png (no padding)');
 	} catch (error) {
 		console.error('❌ Error generating favicon:', error);

@@ -1,6 +1,6 @@
 {
   "name": "Bahá'í Prayers",
-  "short_name": "Prayers",
+  "short_name": "Bahá'í Prayers",
   "description": "A multilingual Bahá'í Prayers app with offline support",
   "start_url": "/",
   "display": "standalone",
@@ -24,13 +24,13 @@
       "purpose": "any"
     },
     {
-      "src": "/favicon-192.png",
+      "src": "/favicon-192-maskable.png",
       "sizes": "192x192", 
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/favicon-512.png",
+      "src": "/favicon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png", 
       "purpose": "maskable"
