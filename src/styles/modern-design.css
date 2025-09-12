@@ -564,6 +564,14 @@ body {
 		bottom: 16px;
 		right: 16px;
 	}
+
+	.detail-page {
+		background: unset;
+	}
+
+	.prayer-detail {
+		height: 100%;
+	}
 }
 
 /* Safe area handling for iOS */
