@@ -551,6 +551,7 @@ body {
 @media (max-width: 480px) {
 	.app {
 		margin: 0;
+		height: calc(100vh - 0px);
 		min-height: 100vh;
 		border-radius: 0;
 	}
