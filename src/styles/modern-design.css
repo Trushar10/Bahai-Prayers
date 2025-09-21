@@ -568,10 +568,6 @@ body {
 	.detail-page {
 		background: unset;
 	}
-
-	.prayer-detail {
-		height: 100%;
-	}
 }
 
 /* Safe area handling for iOS */
